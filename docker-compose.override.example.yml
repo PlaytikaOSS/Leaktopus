@@ -1,0 +1,27 @@
+version: "3.4"
+
+services:
+  web:
+    env_file:
+      - "leaktopus_frontend/.env"
+
+  redis-commander:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+
+  flower:
+    container_name: flower
+    hostname: flower
+    image: mher/flower:latest
+    restart: always
+    environment:
+    - CELERY_BROKER_URL=redis://redis:6379
+    - FLOWER_PORT=5555
+    ports:
+      - "5555:5555"

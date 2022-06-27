@@ -1,0 +1,29 @@
+jinja2<3.1.0
+Flask==1.1.2
+itsdangerous==2.0.1
+# Flask_Caching==1.9.0
+Werkzeug==1.0.1
+flask_debugtoolbar==0.11.0
+# flask_mail==0.9.1
+# flask_static_digest==0.2.1
+# flask_wtf==0.14.3
+pymsteams==0.2.1
+Flask-Cors==3.0.10
+
+# Application server for both development and production.
+gunicorn==20.0.4
+
+# Data and workers.
+redis==3.5.3
+celery==5.0.5
+
+# Tool specific libs.
+PyGithub>=1.55
+elasticsearch==7.17.4
+GitPython
+truffleHog==2.2.1
+pyjwt>=2.4.0 # not directly required, pinned to avoid a vulnerability
+
+# Documentation libs
+flasgger==0.9.5
+pyyaml==6.0

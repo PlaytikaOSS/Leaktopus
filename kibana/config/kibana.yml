@@ -1,0 +1,15 @@
+---
+## Default Kibana configuration from Kibana base image.
+## https://github.com/elastic/kibana/blob/master/src/dev/build/tasks/os_packages/docker_generator/templates/kibana_yml.template.js
+#
+server.name: kibana
+server.host: 0.0.0.0
+elasticsearch.hosts: [ "http://${ES_HOST}:${ES_PORT}" ]
+monitoring.ui.container.elasticsearch.enabled: true
+
+## X-Pack security credentials
+elasticsearch.username: ${ES_USER}
+elasticsearch.password: ${ES_PASS}
+
+# see https://discuss.elastic.co/t/security-exception-current-license-is-non-compliant-for-security-with-license-expired-feature-security/97351
+xpack.security.enabled: false

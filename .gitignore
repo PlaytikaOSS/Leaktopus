@@ -1,0 +1,7 @@
+.idea
+.DS_Store
+.env
+app/*.pem
+docker-compose.override.yml
+venv
+*.sqlite
