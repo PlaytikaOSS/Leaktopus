@@ -4,7 +4,7 @@
 
 # :sweat_drops:Leaktopus:octopus:
 
-**Helps in keeping your source code under control.**
+**Keep your source code under control.**
 
 Based on the **Code C.A.I.N** framework:
 
