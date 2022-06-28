@@ -34,33 +34,33 @@ Based on the **Code C.A.I.N** framework:
     - Paste sites (e.g., PasteBin) _(coming soon)_
   - **Filter results** with a built-in heuristics engine.
   - **Enhance results with IOLs** (Indicators Of Leak):
-      - Secrets
-      - Domains _(highlight organizational domains)_
-      - Emails _(highlight organizational email addresses)_
+      - Secrets in the found sources (including Git repos commits history):
+        - With [Shhgit][1] (using a customized rules list).
+        - With [TruffleHog][2].
+      - URIs (Including incdication of your organization's domains)
+      - Emails (Including indication of your organization's email addresses)
       - Contributors
       - Sensitive keywords (e.g., canary token, internal domains)
-  - **Find secrets** in the found sources (including Git repos commits history):
-    - With [Shhgit][1] (using a customized rules list).
-    - With [TruffleHog][2].
   - Allows to **ignore** public sources, (e.g., "junk" repositories by web crawlers).
   - **OOTB ignore list** of common "junk" sources.
   - **Acknowledge a leak**, and only get notified if the source has been modified since the previous scan.
-  - **Built-in ELK** to search for data in leaks (including full index of Git repositories that contains a "leak").
+  - **Built-in ELK** to search for data in leaks (including full index of Git repositories with IOLs).
   - **Notify on new leaks**
     - MS Teams Webhook.
-    - Cortex XSOAR® (by Palo Alto Networks) Integration _(Coming soon)_
+    - Cortex XSOAR® (by Palo Alto Networks) Integration _(Coming soon)_.
 
 ## Technology Stack
 - Fully Dockerized.
 - API-first Python Flask backend.
 - Decoupled Vue.js (3.x) frontend.
 - SQLite DB.
-- Async scans with Celery + Redis queues.
+- Async tasks with Celery + Redis queues.
 
 ## Prerequisites
   - Docker-Compose
 
 ## Installation
+  - Clone the repository
   - Run Leaktopus
     ```bash
     docker-compose up -d
@@ -72,9 +72,13 @@ Based on the **Code C.A.I.N** framework:
 
 
 ## Updating Leaktopus
-If you wish to upgrade your Leaktopus version, just follow the following steps.
+If you wish to update your Leaktopus version (pulling a newer version), just follow the next steps.
 
-  - Reinstall Leaktopus (data won't be deleted).
+  - Pull the latest version.
+    ```bash
+    git pull
+    ```
+  - Rebuild Docker images (data won't be deleted).
     ```bash
     # Force image recreation
     docker-compose up --force-recreate --build
@@ -83,10 +87,11 @@ If you wish to upgrade your Leaktopus version, just follow the following steps.
   http://{LEAKTOPUS_HOST}/api/updatedb
 
 ## Results Filtering Heuristic Engine
-The built-in heuristic engine is filter the search results by:
+The built-in heuristic engine is filtering the search results to reduce false positives by:
 - Content:
-    - More than X emails containing other domains.
-    - More than X domains containing other domains.
+    - More than X emails containing non-organizational domains.
+    - More than X URIs containing non-organizational domains.
+- Metadata:
     - More than X stars.
     - More than X forks.
 - Sources ignore list.
@@ -112,10 +117,9 @@ As for now, Leaktopus does not provide any authentication mechanism.
 Make sure that you are not exposing it to the world, and doing your best to **restrict access to your Leaktopus instance(s)**.
 
 ## Contributing
-Contributions are mostly welcome.
+Contributions are very welcomed.
 
-Please follow our contribution guidelines and documentation. 
-Contributions are very welcome! Please see our [contribution guidelines first][3].
+Please follow our [contribution guidelines and documentation][3].
 
 [1]: <https://github.com/eth0izzle/shhgit>
 [2]: <https://github.com/trufflesecurity/trufflehog>
