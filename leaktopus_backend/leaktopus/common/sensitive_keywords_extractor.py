@@ -1,4 +1,4 @@
-from subprocess import run, CalledProcessError, STDOUT
+from subprocess import run, CalledProcessError
 import hashlib
 from leaktopus.common.sensitive_keywords import add_sensitive_keyword, get_sensitive_keywords
 from leaktopus.common.leak_handler import get_leak_by_url
@@ -58,6 +58,7 @@ def parse_sensitive_keywords_results(url, output):
     existing_sensitive_keywords_checksums = get_existing_sensitive_keywords_checksums(leak)
 
     for row in output.splitlines():
+        # @todo Support the case where there is ":" in the keyword.
         commit_hash, keyword = row.lstrip('./').split(': ')
         sensitive_keyword = {
             'keyword': keyword.strip('"'),
@@ -75,8 +76,8 @@ def scan(url, full_diff_dir, sensitive_keywords):
         return False
 
     # Add the -e prefix to all keywords for our grep.
-    grep_keywords = [f'-e "{keyword}"' for keyword in sensitive_keywords]
-    grep_cmd = ['grep', '-IroF']
+    grep_keywords = [f'-e {keyword}' for keyword in sensitive_keywords]
+    grep_cmd = ['grep', '-IiroF']
     grep_cmd.extend(grep_keywords)
     grep_cmd.append('.')
 

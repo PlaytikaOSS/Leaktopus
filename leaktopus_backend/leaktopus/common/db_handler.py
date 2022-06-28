@@ -289,8 +289,11 @@ def delete_leak_by_url(url):
     cur = db.cursor()
 
     cur.execute('''DELETE FROM leak WHERE url REGEXP ?''', (url,))
+    # @todo Get the leak id and delete by it.
     cur.execute('''DELETE FROM secret WHERE url REGEXP ?''', (url,))
     cur.execute('''DELETE FROM domain WHERE url REGEXP ?''', (url,))
+    # cur.execute('''DELETE FROM contributors WHERE url REGEXP ?''', (url,))
+    # cur.execute('''DELETE FROM sensitive_keywords WHERE url REGEXP ?''', (url,))
 
     db.commit()
 

@@ -36,7 +36,6 @@ Based on the **Code C.A.I.N** framework:
   - **Enhance results with IOLs** (Indicators Of Leak):
       - Secrets in the found sources (including Git repos commits history):
         - With [Shhgit][1] (using a customized rules list).
-        - With [TruffleHog][2].
       - URIs (Including incdication of your organization's domains)
       - Emails (Including indication of your organization's email addresses)
       - Contributors
@@ -119,8 +118,7 @@ Make sure that you are not exposing it to the world, and doing your best to **re
 ## Contributing
 Contributions are very welcomed.
 
-Please follow our [contribution guidelines and documentation][3].
+Please follow our [contribution guidelines and documentation][2].
 
 [1]: <https://github.com/eth0izzle/shhgit>
-[2]: <https://github.com/trufflesecurity/trufflehog>
-[3]: <https://github.com/Playtika/leaktopus/blob/main/CONTRIBUTING.md>
+[2]: <https://github.com/Playtika/leaktopus/blob/main/CONTRIBUTING.md>

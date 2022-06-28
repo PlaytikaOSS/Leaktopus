@@ -1,4 +1,3 @@
-from flask import abort
 import os
 from github import Github, RateLimitExceededException, BadCredentialsException, GithubException
 from datetime import datetime
@@ -6,7 +5,6 @@ import re
 import json
 import leaktopus.common.db_handler as dbh
 from leaktopus.app import create_celery_app
-from leaktopus.common.leak_handler import leaks_result
 
 celery = create_celery_app()
 

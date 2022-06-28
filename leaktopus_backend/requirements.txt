@@ -21,7 +21,8 @@ celery==5.0.5
 PyGithub>=1.55
 elasticsearch==7.17.4
 GitPython
-truffleHog==2.2.1
+# Disabled.
+# truffleHog==2.2.1
 pyjwt>=2.4.0 # not directly required, pinned to avoid a vulnerability
 
 # Documentation libs
