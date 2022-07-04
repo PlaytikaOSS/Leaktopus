@@ -60,6 +60,12 @@ Based on the **Code C.A.I.N** framework:
 
 ## Installation
   - Clone the repository
+  - Create a local .env file
+    ```bash
+    cd Leaktopus
+    cp .env.example .env
+    ```
+  - Edit .env according to your local setup (see the internal comments).
   - Run Leaktopus
     ```bash
     docker-compose up -d
