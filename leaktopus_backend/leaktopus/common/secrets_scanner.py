@@ -54,38 +54,38 @@ def parse_secrets_results(repo_path, csv_path):
     return secrets
 
 
-# def trufflehog_parse_output(url, output):
-#     secrets = []
-#
-#     results = []
-#     # Limit the number of secrets to handle.
-#     for foundIssue in output["foundIssues"]:
-#         with open(foundIssue, "r") as issue_file:
-#             results.append(json.loads(issue_file.read()))
-#             # Structure
-#             # dict_keys(['date', 'path', 'branch', 'commit'-msg, 'diff', 'stringsFound', 'printDiff', 'commitHash', 'reason'])
-#
-#     # Iterate over the results, and separate the strings found.
-#     for res in results:
-#         for string_found in res["stringsFound"]:
-#             secrets.append({
-#                 "signature_name": res["reason"],
-#                 "commit_sha": res["commitHash"],
-#                 "match_string": string_found,
-#                 "html_url": url[:-4] + "/commit/" + res["commitHash"]
-#             })
-#
-#     return secrets
+def trufflehog_parse_output(url, output):
+    secrets = []
+
+    results = []
+    # Limit the number of secrets to handle.
+    for foundIssue in output["foundIssues"]:
+        with open(foundIssue, "r") as issue_file:
+            results.append(json.loads(issue_file.read()))
+            # Structure
+            # dict_keys(['date', 'path', 'branch', 'commit'-msg, 'diff', 'stringsFound', 'printDiff', 'commitHash', 'reason'])
+
+    # Iterate over the results, and separate the strings found.
+    for res in results:
+        for string_found in res["stringsFound"]:
+            secrets.append({
+                "signature_name": res["reason"],
+                "commit_sha": res["commitHash"],
+                "match_string": string_found,
+                "html_url": url[:-4] + "/commit/" + res["commitHash"]
+            })
+
+    return secrets
 
 
-# def scan_git(url):
-#     output = truffleHog.find_strings(url, printJson=True, surpress_output=True, do_regex=False, do_entropy=True)
-#     if output["foundIssues"]:
-#         return trufflehog_parse_output(url, output)
-#
-#     truffleHog.clean_up(output)
-#
-#     return []
+def scan_git(url):
+    output = truffleHog.find_strings(url, printJson=True, surpress_output=True, do_regex=False, do_entropy=True)
+    if output["foundIssues"]:
+        return trufflehog_parse_output(url, output)
+
+    truffleHog.clean_up(output)
+
+    return []
 
 
 def scan(url, full_diff_dir):
@@ -103,7 +103,6 @@ def scan(url, full_diff_dir):
     ])
 
     base_secrets = parse_secrets_results(url, results_path)
-    # git_secrets = scan_git(url)
-    # total_secrets = base_secrets + git_secrets
-    # store_secrets(url, total_secrets)
-    store_secrets(url, base_secrets)
+    git_secrets = scan_git(url)
+    total_secrets = base_secrets + git_secrets
+    store_secrets(url, total_secrets)

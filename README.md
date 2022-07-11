@@ -32,11 +32,12 @@ Based on the **Code C.A.I.N** framework:
       - Repositories
       - Gists _(coming soon)_
     - Paste sites (e.g., PasteBin) _(coming soon)_
-  - **Filter results** with a built-in heuristics engine.
+  - **Filter results** with a built-in heuristic engine.
   - **Enhance results with IOLs** (Indicators Of Leak):
       - Secrets in the found sources (including Git repos commits history):
         - With [Shhgit][1] (using a customized rules list).
-      - URIs (Including incdication of your organization's domains)
+        - With [TruffleHog][3].
+      - URIs (Including indication of your organization's domains)
       - Emails (Including indication of your organization's email addresses)
       - Contributors
       - Sensitive keywords (e.g., canary token, internal domains)
@@ -128,3 +129,4 @@ Please follow our [contribution guidelines and documentation][2].
 
 [1]: <https://github.com/eth0izzle/shhgit>
 [2]: <https://github.com/Playtika/leaktopus/blob/main/CONTRIBUTING.md>
+[3]: <https://github.com/trufflesecurity/trufflehog>
