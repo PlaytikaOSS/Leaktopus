@@ -18,6 +18,8 @@ RUN apt-get update \
   && useradd --create-home python \
   && mkdir -p /home/python/.cache/pip && chown python:python -R /home/python /app
 
+RUN git config --system core.longpaths true
+
 USER python
 
 COPY --chown=python:python requirements*.txt ./
