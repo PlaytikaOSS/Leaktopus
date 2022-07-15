@@ -1,5 +1,7 @@
 from subprocess import run, CalledProcessError
 import hashlib
+import os
+from loguru import logger
 from leaktopus.common.sensitive_keywords import add_sensitive_keyword, get_sensitive_keywords
 from leaktopus.common.leak_handler import get_leak_by_url
 
@@ -45,24 +47,21 @@ def get_github_commit_url(repo_url, commit_hash):
     return f'{base_url}/commit/{commit_hash}'
 
 
-def parse_sensitive_keywords_results(url, output):
+def parse_sensitive_keywords_results(url, matches):
     # Get leak id from DB.
     leak = get_leak_by_url(url)
 
     # Exit in case that the leak wasn't found.
-    # @todo Replace with exception.
     if not leak:
-        return False
+        raise Exception(f"Cannot find leak for {url}")
 
     # Calc existing sensitive keywords checksums to decide whether new should be inserted to DB.
     existing_sensitive_keywords_checksums = get_existing_sensitive_keywords_checksums(leak)
 
-    for row in output.splitlines():
-        # @todo Support the case where there is ":" in the keyword.
-        commit_hash, keyword = row.lstrip('./').split(': ')
+    for match in matches:
         sensitive_keyword = {
-            'keyword': keyword.strip('"'),
-            'url': get_github_commit_url(url, commit_hash)
+            'keyword': match["keyword"],
+            'url': get_github_commit_url(url, match["sha"])
         }
         sensitive_keyword_checksum = get_sensitive_keyword_checksum(sensitive_keyword)
 
@@ -71,25 +70,35 @@ def parse_sensitive_keywords_results(url, output):
             add_sensitive_keyword_to_db(leak, sensitive_keyword)
 
 
-def scan(url, full_diff_dir, sensitive_keywords):
-    if not sensitive_keywords:
-        return False
+def search_str_in_direcotry(strings, dir):
+    import os
+    results = []
 
-    # Add the -e prefix to all keywords for our grep.
-    grep_keywords = [f'-e {keyword}' for keyword in sensitive_keywords]
-    grep_cmd = ['grep', '-IiroF']
-    grep_cmd.extend(grep_keywords)
-    grep_cmd.append('.')
+    for file in os.listdir(dir):
+        path = dir + "/" + file
+        if os.path.isdir(path):
+            search_str_in_direcotry(path, strings)
+        else:
+            matches = {x for x in strings if x in open(path).read()}
+            for m in matches:
+                results.append({"sha": file, "keyword": m})
+
+    return results
+
+
+def scan(url, full_diff_dir, sensitive_keywords):
+    logger.debug("Extracting sensitive keywords from {}", url)
+    # Remove empty strings from our list.
+    sensitive_keywords_clean = list(filter(None, sensitive_keywords))
+
+    if not sensitive_keywords_clean:
+        return False
 
     try:
-        output = run(grep_cmd,
-                     check=True,
-                     capture_output=True,
-                     text=True,
-                     cwd=full_diff_dir
-                     ).stdout
-
-        if output:
-            parse_sensitive_keywords_results(url, output)
-    except CalledProcessError:
+        matches = search_str_in_direcotry(sensitive_keywords, full_diff_dir)
+        parse_sensitive_keywords_results(url, matches)
+    except Exception as e:
+        logger.error("Error while extracting sensitive keywords for {} - {}", url, e)
         return False
+
+    logger.debug("Done extracting sensitive keywords from {}", url)

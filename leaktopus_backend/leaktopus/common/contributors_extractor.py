@@ -3,6 +3,7 @@ from subprocess import Popen, CalledProcessError, STDOUT, PIPE
 import hashlib
 from leaktopus.common.contributors import add_contributor, get_contributors
 from leaktopus.common.leak_handler import get_leak_by_url
+from loguru import logger
 
 
 def is_contributor_org_domain(author_email, committer_email, organization_domains):
@@ -70,9 +71,8 @@ def parse_contributors_results(url, output, organization_domains):
     leak = get_leak_by_url(url)
 
     # Exit in case that the leak wasn't found.
-    # @todo Replace with exception.
     if not leak:
-        return False
+        raise Exception(f"Cannot find leak for {url}")
 
     # Calc existing contributors checksums to decide whether new should be inserted to DB.
     existing_contributors_checksums = get_existing_contributors_checksums(leak)
@@ -86,6 +86,9 @@ def parse_contributors_results(url, output, organization_domains):
 
 
 def scan(url, full_diff_dir, organization_domains):
+    logger.debug("Extracting contributors from {}", url)
+    # @todo Get the list of committers from GitHub without cloning the repo.
+    # https://api.github.com/repos/:owner/:repo/commits
     try:
         # Using ### as a separator between the values.
         git_log_proc = Popen([
@@ -101,5 +104,8 @@ def scan(url, full_diff_dir, organization_domains):
 
         if str_output:
             parse_contributors_results(url, str_output, organization_domains)
-    except CalledProcessError:
+    except CalledProcessError as e:
+        logger.error("Error while extracting contributors for {} - {}", url, e)
         return False
+
+    logger.debug("Done extracting contributors from {}", url)

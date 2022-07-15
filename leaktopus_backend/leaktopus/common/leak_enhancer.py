@@ -2,16 +2,16 @@ import os
 import shutil
 from git.repo.base import Repo
 import subprocess
+from loguru import logger
 
 from leaktopus.app import create_celery_app
 
 celery = create_celery_app()
 # How many times to retry the analysis task before failing.
-ANALYSIS_MAX_RETRIES = 5
+ANALYSIS_MAX_RETRIES = 10
 # Interval between analysis task retry.
 RETRY_INTERVAL = 30
 # Maximum size (in KB) of repository to clone. Reps bigger than that will be skipped.
-# @todo Increase and allow to control via environment variable.
 REPO_MAX_SIZE = os.environ.get('REPO_MAX_CLONE_SIZE', 100000)
 
 
@@ -36,11 +36,15 @@ def enhance_repo(self, repo_name, scan_id, clones_base_dir, organization_domains
     from leaktopus.common.contributors_extractor import scan as contributors_extractor
     from leaktopus.common.sensitive_keywords_extractor import scan as sensitive_keywords_extractor
 
+    logger.info("Starting analysis of {}", repo_name)
+
+    # Check if the scan should be aborted.
     if scans.is_scan_aborting(scan_id):
+        logger.info("Aborting scan {}", scan_id)
         return True
 
     if is_repo_max_size_exceeded(repo_name):
-        print(f"Skipped {repo_name} since max size exceeded")
+        logger.info("Skipped {} since max size exceeded", repo_name)
         return True
 
     ts = datetime.datetime.now().timestamp()
@@ -49,27 +53,33 @@ def enhance_repo(self, repo_name, scan_id, clones_base_dir, organization_domains
 
     try:
         # Now, clone the repo.
+        logger.debug("Cloning repository {} to {}", repo_path, clone_dir)
         Repo.clone_from(repo_path, clone_dir)
 
         # Prepare the full Git diff for secrets scan.
+        logger.debug("Extracting Git diff for {}", repo_path)
         subprocess.call(['sh', '/app/secrets/git-extract-diff'], cwd=clone_dir)
         # Extract the commits history from the repository.
         full_diff_dir = os.path.join(clone_dir, 'commits_data')
 
+        logger.debug("Starting the enrichment tasks for {}", repo_path)
         domains_scan(repo_path, full_diff_dir, organization_domains)
         sensitive_keywords_extractor(repo_path, full_diff_dir, sensitive_keywords)
         contributors_extractor(repo_path, full_diff_dir, organization_domains)
         secrets_scan(repo_path, full_diff_dir)
     except Exception as e:
-        print(f'Exception raised on the analysis of {repo_name}, it would be retried soon.')
+        logger.error("Exception raised on the analysis of {}, it would be retried soon. Exception: {}", repo_name, e)
 
         # Cleanup of repo clone.
         shutil.rmtree(os.path.join(clones_base_dir, str(ts)), ignore_errors=True)
+        logger.debug("Completed  the data cleanup for {} - {}", repo_name, clone_dir)
 
         raise self.retry(exc=e, countdown=RETRY_INTERVAL)
 
     # Cleanup of repo clone.
     shutil.rmtree(os.path.join(clones_base_dir, str(ts)), ignore_errors=True)
+    logger.debug("Completed the data cleanup for {} - {}", repo_name, clone_dir)
+    logger.info("Completed the analysis of {}", repo_name)
 
 
 @celery.task

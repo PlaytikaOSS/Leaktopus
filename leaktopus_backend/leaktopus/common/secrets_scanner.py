@@ -8,6 +8,7 @@ import json
 from truffleHog import truffleHog
 from leaktopus.common.db_handler import add_secret, get_secret
 from leaktopus.common.leak_handler import get_leak_by_url
+from loguru import logger
 
 # Max secrets to store per URL
 MAX_SECRETS_PER_URL = 30
@@ -91,6 +92,7 @@ def scan_git(url):
 def scan(url, full_diff_dir):
     results_path = os.path.join(full_diff_dir, 'results.csv')
 
+    logger.debug("Scanning {} with Shhgit", url)
     subprocess.call([
         '/usr/local/bin/shhgit',
         '-config-path',
@@ -101,8 +103,11 @@ def scan(url, full_diff_dir):
         '-local',
         full_diff_dir,
     ])
+    logger.debug("Shhgit scan for {} has been completed", url)
 
     base_secrets = parse_secrets_results(url, results_path)
+    logger.debug("Scanning {} with TruffleHog", url)
     git_secrets = scan_git(url)
+    logger.debug("TruffleHog scan for {} has been completed", url)
     total_secrets = base_secrets + git_secrets
     store_secrets(url, total_secrets)
