@@ -103,7 +103,7 @@ def get_db():
     is_db_exists = os.path.isfile(db_path)
 
     if db is None:
-        db = g._database = sqlite3.connect(db_path)
+        db = g._database = sqlite3.connect(db_path, timeout=20)
         db.create_function("REGEXP", 2, regexp)
         db.row_factory = dict_factory
 

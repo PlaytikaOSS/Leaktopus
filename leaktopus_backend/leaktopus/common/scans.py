@@ -32,6 +32,7 @@ def get_scans(**kwargs):
         res = cur.execute('''SELECT * FROM scans''')
 
     scans = res.fetchall()
+    cur.close()
 
     # Get the name of the status from the ScanStatus Enum.
     for scan in scans:
