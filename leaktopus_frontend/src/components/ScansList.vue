@@ -145,8 +145,6 @@
             initNewScan: function () {
                 let that = this
                 // Get the organization domains as array.
-                const orgDomainsArray = this.organization_domains.split(/[, ]+/);
-                const sensitiveKeywordsArray = this.sensitive_keywords.split(/[, ]+/);
 
                 if (!this.checkForm())
                     return false
@@ -154,8 +152,8 @@
                 axios
                     .post(this.leaktopusApiUrl + 'api/scan', {
                         "q": this.search_query,
-                        "organization_domains": orgDomainsArray,
-                        "sensitive_keywords": sensitiveKeywordsArray
+                        "organization_domains": (this.organization_domains !== "") ? this.organization_domains.split(/[, ]+/) : [],
+                        "sensitive_keywords": (this.sensitive_keywords !== "") ? this.sensitive_keywords.split(/[, ]+/) : []
                     })
                     .then(function () {
                         // Update the view.
