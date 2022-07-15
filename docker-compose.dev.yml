@@ -64,7 +64,7 @@ services:
 
   worker:
     <<: *default-app
-    command: celery -A "leaktopus.app.celery_app" worker --beat -l "${CELERY_LOG_LEVEL:-info}"
+    entrypoint: watchmedo auto-restart --directory=./leaktopus/ --patterns=*.py --recursive -- celery -A "leaktopus.app.celery_app" worker --beat -l "${CELERY_LOG_LEVEL:-info}"
 #    depends_on:
 #      - elasticsearch
     deploy:
@@ -73,9 +73,10 @@ services:
           cpus: "${DOCKER_WORKER_CPUS:-0}"
           memory: "${DOCKER_WORKER_MEMORY:-0}"
     volumes:
-      - "./leaktopus_backend/data/:/data"
-      - "./leaktopus_backend/db/:/db"
-      - "./leaktopus_backend/:/app"
+      - ./leaktopus_backend/data/:/data
+      - ./leaktopus_backend/db/:/db
+      - ./leaktopus_backend/:/app
+      - /var/run/docker.sock:/var/run/docker.sock
 
 #  elasticsearch:
 #    build:
