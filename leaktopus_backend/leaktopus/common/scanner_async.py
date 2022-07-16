@@ -5,6 +5,7 @@ import re
 import json
 import leaktopus.common.db_handler as dbh
 from leaktopus.app import create_celery_app
+from loguru import logger
 
 celery = create_celery_app()
 
@@ -32,10 +33,21 @@ def save_gh_leaks(code_results, search_query, organization_domains):
     for res in code_results:
         clone_url = res.repository.clone_url
 
+        org_emails = []
+        # Try to extract organization emails.
+        try:
+            org_emails = get_org_emails(res.decoded_content.decode(), organization_domains)
+        except AssertionError as e:
+            logger.error("Failed to extract org emails from the content file {} of {} - {}",
+                     res,
+                     res.repository.clone_url,
+                     e)
+            pass
+
         leak_data = {
             "file_name": res.name,
             "file_url": res.html_url,
-            "org_emails": get_org_emails(res.decoded_content.decode(), organization_domains)
+            "org_emails": org_emails
         }
 
         # Group by repos.
@@ -406,46 +418,58 @@ def is_repo_requires_scan(repo):
 def filter_gh_results(code_results, organization_domains):
     filtered_results = []
 
+    logger.info("Search results filtering started - {} results before filtering", len(code_results))
+
     # Replace with a dynamic list editable by the user.
     # gh_filtered_repos()
     for result in code_results:
+        repo_url = result.repository.clone_url
         # Filter` repos with specific Regex.
-        if is_ignored_repo(result.repository.clone_url):
-            # print('ignored repo')
+        if is_ignored_repo(repo_url):
+            # logger.debug('{} was ignored', repo_url)
             continue
 
         if not is_repo_requires_scan(result):
-            # print('not requires scan')
+            # logger.debug('{} does not requires a scan', repo_url)
             continue
 
         # Do not add if it has more than 2 forks.
         if result.repository.forks_count >= MIN_FORKS_FILTER:
-            # print('Too many forks')
+            # logger.debug('{} was skipped since it has more than {} forks', repo_url, MIN_FORKS_FILTER)
             continue
 
         # Do not add if it has more than 2 stars.
         # @todo Replace by :stars<2 in the search query.
         if result.repository.stargazers_count >= MAX_STARS_FILTER:
-            # print('Too many stars')
+            # logger.debug('{} was skipped since it has more than {} stars', repo_url, MAX_STARS_FILTER)
             continue
 
-        content = result.decoded_content.decode()
+        try:
+            content = result.decoded_content.decode()
 
-        # Filter repos with a large number of non-organization email addresses.
-        if non_org_emails_count(content, organization_domains) >= MIN_NON_ORG_EMAIL:
-            # print('Many non org emails')
-            continue
+            # Filter repos with a large number of non-organization email addresses.
+            if non_org_emails_count(content, organization_domains) >= MIN_NON_ORG_EMAIL:
+                # logger.debug('{} was skipped since it has more than {} organization emails', repo_url, MIN_NON_ORG_EMAIL)
+                continue
 
-        # Ignore repos with a large number of domains in a list.
-        if domains_count(content) >= MIN_DOMAINS_NUMBER:
-            # print('Many domains in one place.')
-            continue
+            # Ignore repos with a large number of domains in a list.
+            if domains_count(content) >= MIN_DOMAINS_NUMBER:
+                # logger.debug('{} was skipped since it has more than {} external domains', repo_url, MIN_DOMAINS_NUMBER)
+                continue
+        except AssertionError as e:
+            logger.error("Failed to fetch the content file {} of {} - {}",
+                         result,
+                         repo_url,
+                         e)
+            pass
 
         filtered_results.append(result)
 
     # In case that all results were filtered - raise no results exception.
     if not filtered_results:
         from leaktopus.exceptions.scans import ScanHasNoResults
+        logger.info("All results were filtered", )
         raise ScanHasNoResults("All results were filtered")
 
+    logger.info("Search results filtering has been completed - {} results after filtering", len(filtered_results))
     return filtered_results
