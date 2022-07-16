@@ -121,8 +121,8 @@ def leak_enhancer(repos_full_names, scan_id, organization_domains=[], sensitive_
         continue
 
     if result_group.successful():
-        print('Done analyzing leaks.')
+        logger.info('Done analyzing leaks for scan #{}.', scan_id)
     else:
-        print('Error in one of the enhancement tasks.')
+        logger.warning('There was an error in one of the enhancement tasks of scan #{}.', scan_id)
 
     return repos_full_names
