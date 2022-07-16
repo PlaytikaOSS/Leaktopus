@@ -1,11 +1,12 @@
 from flask import Blueprint, jsonify, request, abort, current_app
+from loguru import logger
 
 scans_api = Blueprint('scans_api', __name__)
 
 
 @scans_api.errorhandler(500)
 def custom500(error):
-    print(error)
+    logger.error("Error in scans API - {}", error)
     return jsonify(results={"success": False, "message": error.description})
 
 
@@ -48,7 +49,7 @@ def start_scan():
 
 def is_valid_sensitive_keywords(sensitive_keywords):
     blacklisted_characters = r';&|"`\\!<>$'
-    print(sensitive_keywords)
+
     for keyword in sensitive_keywords:
         if any(elem in blacklisted_characters for elem in keyword):
             return False

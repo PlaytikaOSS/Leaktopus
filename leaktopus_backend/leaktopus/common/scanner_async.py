@@ -101,12 +101,12 @@ def github_authenticate():
     # Authenticate to github
     github_access_token = os.environ.get('GITHUB_ACCESS_TOKEN')
     if not github_access_token:
-        print("Error: GitHub API key is missing.")
+        logger.critical("Error: GitHub API key is missing.")
         return None
     try:
         g = Github(github_access_token)
     except BadCredentialsException:
-        print('Error:GitHub bad credentials.')
+        logger.critical('Error:GitHub bad credentials.')
         return None
     except RateLimitExceededException as e:
         raise
@@ -140,7 +140,7 @@ def github_get_num_of_pages(results):
     except RateLimitExceededException as e:
         raise
     except Exception as e:
-        print("error with getting last page url")
+        logger.error("Error with getting last page url - {}", e)
         return None
     if url:
         num_of_pages = int(parse_qs(urlparse(url).query)['page'][0])
@@ -169,7 +169,7 @@ def github_preprocessor(self, search_query, scan_id):
             return None
 
     except RateLimitExceededException as e:
-        print(f'exception raised on preprocessing github, it would be retry after 5 seconds')
+        logger.warning('Rate limit exceeded when preprocessing github. Retry in 5 seconds')
         raise self.retry(exc=e, countdown=5)
 
     answer = {"results": results, "num_pages": num_pages, "search_query": search_query}
@@ -223,7 +223,7 @@ def github_fetch_pages(struct, scan_id, organization_domains):
             gh_results_filtered = filter_gh_results(merged_pages, organization_domains)
             return save_gh_leaks(gh_results_filtered, struct["search_query"], organization_domains)
         else:
-            print('Error: One of the pages tasks were unsuccessful')
+            logger.error('There was an error in getting at least one of the github result pages.')
             return []
 
 
@@ -261,7 +261,7 @@ def github_get_page(self, results, page_num, scan_id):
             except TimeoutError as e:
                 continue
     except RateLimitExceededException as e:
-        print(f'Exception raised on getting page number {page_num} github, it would be retried after 10 seconds')
+        logger.warning('Rate limit exceeded on getting page number {} from github. Retry in 10 seconds', page_num)
         raise self.retry(exc=e, countdown=10)
     return cur_page
 
@@ -300,8 +300,7 @@ def update_scan_status_async(repos_full_names, scan_id):
 def error_handler(request, exc, traceback, scan_id):
     from leaktopus.exceptions.scans import ScanHasNoResults
 
-    print('Task {0} raised exception: {1!r}\n{2!r}'.format(
-          request.id, exc, traceback))
+    logger.error('Task {} raised exception: {}', request.id, exc)
 
     import leaktopus.common.scans as scans
     from leaktopus.models.scan_status import ScanStatus

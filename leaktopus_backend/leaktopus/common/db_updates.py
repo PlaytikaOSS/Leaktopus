@@ -1,4 +1,5 @@
 from sqlite3 import OperationalError
+from loguru import logger
 import leaktopus.common.db_handler as dbh
 import leaktopus.common.updates as updates
 
@@ -21,7 +22,7 @@ def apply_db_updates(is_clean_install):
         done_updates = updates.get_updates(status=1)
     except OperationalError as e:
         if str(e).startswith("no such table:"):
-            print("Updates table not yet exists")
+            logger.info("Updates table not yet exists")
             pass
 
     # Get the update ids of done updates.
@@ -37,7 +38,7 @@ def apply_db_updates(is_clean_install):
 
                 # Update as done in DB.
                 updates.add_update(update_id)
-                print(f'Update {update_id} completed.')
+                logger.info('DB Update #{} has been completed.', update_id)
 
 
 # Add below update function with a unique number, those will be executed automatically on next update request.

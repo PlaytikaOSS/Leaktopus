@@ -2,6 +2,7 @@ import sqlite3
 from flask import Flask, g, abort
 import os
 import re
+from loguru import logger
 import leaktopus.common.scans as scans
 import leaktopus.common.contributors as contributors
 import leaktopus.common.sensitive_keywords as sensitive_keywords
@@ -185,7 +186,7 @@ def get_leak(**kwargs):
         return leaks_res
 
     except Exception as e:
-        print(e)
+        logger.error("Error while getting leak data from DB - {}", e)
         abort(500)
 
 
