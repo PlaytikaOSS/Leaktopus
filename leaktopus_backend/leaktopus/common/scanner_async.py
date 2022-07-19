@@ -218,7 +218,8 @@ def github_fetch_pages(struct, scan_id, organization_domains):
     if os.environ.get('USE_EXPERIMENTAL_SHOW_PARTIAL_RESULTS_EVEN_IF_TASK_FAILS', False):
         logger.info(
             "Using experimental show partial results even if task fails.")
-        show_partial_results(result_group)
+        with allow_join_result():
+            return show_partial_results(result_group, struct["search_query"], organization_domains)
 
     # Celery flag to allow join
     with allow_join_result():
@@ -235,22 +236,23 @@ def github_fetch_pages(struct, scan_id, organization_domains):
             return []
 
 
-def show_partial_results(result_group):
-    with allow_join_result():
-        for result in result_group:
-            try:
-                rg = result.get()
-                results_group_list = [rg]
-                merged_pages = merge_pages(results_group_list)
-                gh_results_filtered = filter_gh_results(
-                    merged_pages, organization_domains)
-                save_gh_leaks(gh_results_filtered,
-                              struct["search_query"], organization_domains)
-            except ScanHasNoResults as e:
-                logger.info("Scan has no results: {}".format(e))
-            except Exception as e:
-                logger.error(
-                    'There was an error in getting at least one of the github result pages. Task: {}. Error: {}', result, e)
+def show_partial_results(result_group, search_query, organization_domains):
+    grouped_results = []
+    for result in result_group:
+        try:
+            rg = result.get()
+            results_group_list = [rg]
+            merged_pages = merge_pages(results_group_list)
+            gh_results_filtered = filter_gh_results(
+                merged_pages, organization_domains)
+            grouped_results += save_gh_leaks(gh_results_filtered,
+                                             search_query, organization_domains)
+        except ScanHasNoResults as e:
+            logger.info("Scan has no results: {}".format(e))
+        except Exception as e:
+            logger.error(
+                'There was an error in getting at least one of the github result pages. Task: {}. Error: {}', result, e)
+    return grouped_results
 
 
 @celery.task(bind=True, max_retries=200)
