@@ -6,7 +6,7 @@ ENV GOBIN /go/bin
 #RUN export CGO_ENABLED=0 && go get github.com/eth0izzle/shhgit
 RUN export CGO_ENABLED=0 && go install github.com/eth0izzle/shhgit@latest
 
-FROM python:3.9.5-slim-buster as app
+FROM python:3.9-slim-buster as app
 LABEL maintainer="Rotem Reiss <rotemr@playtika.com>"
 
 WORKDIR /app
