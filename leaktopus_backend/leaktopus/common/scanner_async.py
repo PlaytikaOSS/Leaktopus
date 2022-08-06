@@ -221,6 +221,7 @@ def github_fetch_pages(struct, scan_id, organization_domains):
         with allow_join_result():
             return show_partial_results(result_group, struct["search_query"], organization_domains)
 
+    # @todo Remove the following lines when the expermintal flag will be part of the core.
     # Celery flag to allow join
     with allow_join_result():
         if result_group.successful():
