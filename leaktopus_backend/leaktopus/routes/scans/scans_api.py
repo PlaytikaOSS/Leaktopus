@@ -66,6 +66,28 @@ def start_scan_extended():
         in: body
         type: string
         required: true
+      - name: enhancement_modules
+        in: body
+        description: List of enhancement modules to use for the scan.
+
+            Sending an empty array will disable all modules.
+
+            Not sending the parameter will enable all modules.
+        schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - domains
+                - sensitive_keywords
+                - contributors
+                - secrets
+              examples:
+                - domains
+                - sensitive_keywords
+                - contributors
+                - secrets
+        required: false
       - name: organization_domains
         in: body
         schema:
@@ -108,9 +130,16 @@ def start_scan_extended():
 
         sensitive_keywords = content["sensitive_keywords"]
 
+    if "enhancement_modules" in content:
+        enhancement_modules = content["enhancement_modules"]
+    else:
+        # Use the default enhancement modules if the parameter is not sent.
+        from leaktopus.common.leak_enhancer import get_enhancement_modules
+        enhancement_modules = get_enhancement_modules()
+
     # Scan (in an async way with Celery)
     import leaktopus.common.scanner_async as scanner
-    scan_id = scanner.scan(content["q"], org_domains, sensitive_keywords)
+    scan_id = scanner.scan(content["q"], org_domains, sensitive_keywords, enhancement_modules)
 
     # Get the new scan's information.
     try:
