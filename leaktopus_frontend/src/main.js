@@ -20,7 +20,7 @@ app.component('font-awesome-icon', FontAwesomeIcon)
 
 // Get the API URL from our configuration file.
 let api_url
-if (Config.LEAKTOPUS_API_URL === "$LEAKTOPUS_API_URL") {
+if (Config.LEAKTOPUS_API_URL !== "$LEAKTOPUS_API_URL") {
     api_url = Config.LEAKTOPUS_API_URL
 }
 else {

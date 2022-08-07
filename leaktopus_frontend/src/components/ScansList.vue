@@ -46,6 +46,23 @@
                                         title="Separated by comma (,)"
                                         v-model="sensitive_keywords">
                                 </div>
+                                <div class="input-group mt-2">
+                                    <span class="input-group-text" title="Select enhancement modules to use">
+                                      Enabled Enhancement Modules
+                                    </span>
+                                    <select
+                                        class="form-select form-select-sm"
+                                        multiple
+                                        size="5"
+                                        aria-label="multiple enhancement-modules"
+                                        v-model="enhancement_modules">
+                                      <option value>- None -</option>
+                                      <option value="domains">Domains</option>
+                                      <option value="sensitive_keywords">Sensitive Keywords</option>
+                                      <option value="contributors">Contributors</option>
+                                      <option value="secrets">Secrets</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -103,6 +120,12 @@
                 search_query: "",
                 organization_domains: "",
                 sensitive_keywords: "",
+                enhancement_modules: [
+                    "domains",
+                    "sensitive_keywords",
+                    "contributors",
+                    "secrets"
+                ],
                 isRefreshing: false,
                 errors: []
             }
@@ -153,7 +176,8 @@
                     .post(this.leaktopusApiUrl + 'api/scan', {
                         "q": this.search_query,
                         "organization_domains": (this.organization_domains !== "") ? this.organization_domains.split(/[, ]+/) : [],
-                        "sensitive_keywords": (this.sensitive_keywords !== "") ? this.sensitive_keywords.split(/[, ]+/) : []
+                        "sensitive_keywords": (this.sensitive_keywords !== "") ? this.sensitive_keywords.split(/[, ]+/) : [],
+                        "enhancement_modules": (this.enhancement_modules[0] === "") ? [] : this.enhancement_modules,
                     })
                     .then(function () {
                         // Update the view.
