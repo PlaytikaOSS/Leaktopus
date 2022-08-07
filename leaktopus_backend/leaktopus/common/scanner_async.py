@@ -340,7 +340,7 @@ def error_handler(request, exc, traceback, scan_id):
         scans.update_scan_status(scan_id, ScanStatus.SCAN_FAILED)
 
 
-def scan(search_query, organization_domains=[], sensitive_keywords=[]):
+def scan(search_query, organization_domains=[], sensitive_keywords=[], enhancement_modules=[]):
     from leaktopus.common.github_indexer import github_index_commits
     from leaktopus.common.leak_enhancer import leak_enhancer
     import leaktopus.common.scans as scans
@@ -359,7 +359,8 @@ def scan(search_query, organization_domains=[], sensitive_keywords=[]):
         leak_enhancer.s(
             scan_id=scan_id,
             organization_domains=organization_domains,
-            sensitive_keywords=sensitive_keywords
+            sensitive_keywords=sensitive_keywords,
+            enhancement_modules=enhancement_modules
         ) |\
         github_index_commits.s(scan_id=scan_id) |\
         update_scan_status_async.s(scan_id=scan_id)
