@@ -255,3 +255,97 @@ def kill_scan(id):
         abort(500)
 
     return jsonify(results=scan)
+
+
+@scans_api.route("/api/repo/enhance", methods=['POST'])
+def enhance_repo():
+    """API For enhancing a repository known to Leaktopus (async).
+    ---
+    parameters:
+      - name: repo_name
+        in: body
+        type: string
+        description: Name of the repository - "OWNER/REPO". Use only repositories already known to Leaktopus (leaks).
+        example: PlaytikaOSS/Leaktopus
+        required: true
+      - name: enhancement_modules
+        in: body
+        description: List of enhancement modules to use for the scan.
+
+            Sending an empty array will disable all modules.
+
+            Not sending the parameter will enable all modules.
+        schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - domains
+                - sensitive_keywords
+                - contributors
+                - secrets
+              examples:
+                - domains
+                - sensitive_keywords
+                - contributors
+                - secrets
+        required: false
+      - name: organization_domains
+        in: body
+        schema:
+            type: array
+            items:
+              type: string
+        required: false
+      - name: sensitive_keywords
+        in: body
+        schema:
+            type: array
+            items:
+              type: string
+        required: false
+    responses:
+      200:
+        description: Enhancement task information.
+
+      422:
+        description: Repository name is missing.
+
+      500:
+        description: Generic error.
+    """
+    content = request.get_json(silent=True)
+    if not content or not content["repo_name"]:
+        abort(422)
+
+    # Get the organization domains from the request body.
+    org_domains = []
+    if "organization_domains" in content:
+        org_domains = content["organization_domains"]
+
+    # Get the sensitive keywords from the request body.
+    sensitive_keywords = []
+    if "sensitive_keywords" in content:
+        if not is_valid_sensitive_keywords(content["sensitive_keywords"]):
+            return jsonify(results={"success": False, "error": "blacklisted characters in sensitive_keywords"})
+
+        sensitive_keywords = content["sensitive_keywords"]
+
+    if "enhancement_modules" in content:
+        enhancement_modules = content["enhancement_modules"]
+    else:
+        # Use the default enhancement modules if the parameter is not sent.
+        from leaktopus.common.leak_enhancer import get_enhancement_modules
+        enhancement_modules = get_enhancement_modules()
+
+    # Scan (in an async way with Celery)
+    from leaktopus.common.leak_enhancer import enhance_repo
+    task = enhance_repo.s(
+                content["repo_name"],
+                organization_domains=org_domains,
+                sensitive_keywords=sensitive_keywords,
+                enhancement_modules=enhancement_modules
+            )
+    task.apply_async()
+
+    return jsonify(results={"success": True})
