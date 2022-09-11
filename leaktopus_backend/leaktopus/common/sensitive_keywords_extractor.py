@@ -43,7 +43,7 @@ def get_existing_sensitive_keywords_checksums(leak):
 
 
 def get_github_commit_url(repo_url, commit_hash):
-    base_url = repo_url.rstrip('.git')
+    base_url = repo_url.removesuffix('.git')
     return f'{base_url}/commit/{commit_hash}'
 
 
