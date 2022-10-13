@@ -219,9 +219,13 @@ def github_fetch_pages(struct, scan_id, organization_domains):
         logger.info(
             "Using experimental show partial results even if task fails.")
         with allow_join_result():
-            return show_partial_results(result_group, struct["search_query"], organization_domains)
+            pr = show_partial_results(result_group, struct["search_query"], organization_domains)
+            if not pr:
+                raise ScanHasNoResults("All results including partial were filtered")
 
-    # @todo Remove the following lines when the expermintal flag will be part of the core.
+            return pr
+
+    # @todo Remove the following lines when the experimental flag will be part of the core.
     # Celery flag to allow join
     with allow_join_result():
         if result_group.successful():
