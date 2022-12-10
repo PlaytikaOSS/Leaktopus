@@ -114,43 +114,6 @@ def get_db():
     return db
 
 
-def get_alert(**kwargs):
-    try:
-        sql_cond = []
-        sql_vars = ()
-        for col in kwargs.keys():
-            sql_vars = (*sql_vars, kwargs[col])
-            sql_cond.append(col)
-
-        cur = get_db().cursor()
-        if sql_vars:
-            where_str = ("=? AND ").join(sql_cond) + "=?"
-            res = cur.execute("SELECT * FROM alert WHERE " + where_str, sql_vars)
-        else:
-            res = cur.execute('''SELECT * FROM alert''')
-        return res.fetchall()
-
-    except Exception as e:
-        abort(500)
-
-
-def add_alert(leak_id, type):
-    try:
-        # Insert or ignore if already exists
-        db = get_db()
-
-        cursor = db.cursor()
-        cursor.execute('''
-                INSERT OR IGNORE INTO alert(leak_id, "type")
-                    VALUES(?,?)
-                ''', (leak_id, type,))
-        db.commit()
-        return cursor.lastrowid
-
-    except Exception as e:
-        abort(500)
-
-
 def get_leak(**kwargs):
     try:
         sql_cond = []

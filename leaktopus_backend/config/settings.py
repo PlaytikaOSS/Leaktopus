@@ -24,13 +24,6 @@ REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
 CELERY_CONFIG = {
     'broker_url': REDIS_URL,
     'result_backend': REDIS_URL,
-    'include': [
-        'leaktopus.common.scanner_async',
-        'leaktopus.common.github_indexer',
-        'leaktopus.common.leak_enhancer',
-        'leaktopus.common.teams_alerter',
-        'leaktopus.common.cron'
-    ],
     'task_serializer': 'pickle',
     'result_serializer': 'pickle',
     'accept_content': ['pickle'],

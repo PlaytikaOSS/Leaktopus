@@ -2,14 +2,17 @@ from flask import Flask, g, redirect, url_for, abort
 from flask_cors import CORS
 from werkzeug.debug import DebuggedApplication
 from celery import Celery
+
+from config.celery import cronjobs
 from leaktopus.routes.github.github_api import github_api
 from leaktopus.routes.system.system_api import system_api
 from leaktopus.routes.alerts.alerts_api import alerts_api
 from leaktopus.routes.leaks.leaks_api import leaks_api
 from leaktopus.routes.scans.scans_api import scans_api
+from leaktopus.utils.common_imports import logger
 import os
-# from leaktopus.extensions import cache, debug_toolbar
 from flasgger import Swagger
+
 
 
 def create_celery_app(app=None):
@@ -20,17 +23,13 @@ def create_celery_app(app=None):
     :param app: Flask app
     :return: Celery app
     """
+    logger.debug("____create_celery_app: {} ", app)
     app = app or create_app()
-
     celery = Celery(app.import_name)
-    celery.conf.update(app.config.get('CELERY_CONFIG', {}))
-    celery.conf.beat_schedule = {
-        'run-all-crons-every-minute': {
-            'task': 'leaktopus.common.cron.cron_jobs',
-            'schedule': int(os.environ.get('CRON_INTERVAL', '60')),
-        }
-    }
 
+    celery_config = app.config.get("CELERY_CONFIG", {})
+    celery.conf.update(celery_config)
+    celery.conf.beat_schedule = cronjobs
     TaskBase = celery.Task
 
     class ContextTask(TaskBase):
