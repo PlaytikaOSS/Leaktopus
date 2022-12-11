@@ -15,8 +15,6 @@ class SendAlertsNotificationTask:
         self.leak_service = leak_service
         self.alert_service = alert_service
         self.notification_service = notification_service
-        self.server_url = kwargs.get('server_url')
-        self.integration_token = kwargs.get('integration_token')
 
     def run(self):
         notification_type = self.notification_service.get_provider_name()
@@ -31,3 +29,5 @@ class SendAlertsNotificationTask:
         # Add the new notified leaks to DB as alerts.
         for leak in leaks_notified:
             self.alert_service.add_alert(leak.pid, notification_type)
+
+        return leaks_notified
