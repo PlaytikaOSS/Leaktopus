@@ -18,11 +18,22 @@ HTTPS_ENABLED = os.getenv('HTTPS_ENABLED', 0)
 # MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'contact@local.host')
 
 DATABASE_PATH = os.environ.get("DB_PATH", "/tmp/leaktopus.sqlite")
+
+SERVER_URL = "https" if int(HTTPS_ENABLED) else "http" + '://' + SERVER_NAME
+
 SERVICES = {
-    "notification": {
+    "alert": {
         "providers": ["sqlite"],
         "options": {
             "db": True,
+        },
+    },
+    "notification": {
+        "provider": "ms_teams",
+        "options": {
+            "db": False,
+            "integration_token": os.environ.get("TEAMS_WEBHOOK_URL"),
+            "server_url": SERVER_URL,
         },
     },
 }

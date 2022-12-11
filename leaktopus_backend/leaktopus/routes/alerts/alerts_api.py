@@ -1,5 +1,8 @@
 from flask import Blueprint, jsonify, request, abort, current_app
 
+from leaktopus.factory import create_notification_service
+from leaktopus.usecases.ms_teams_notification_test import MSTeamsNotificationTestUseCase
+
 alerts_api = Blueprint('alerts_api', __name__)
 
 
@@ -35,6 +38,10 @@ def teams_webhook_test():
       200:
         description: Operation result with confirmation/error message.
     """
-    import leaktopus.common.teams_alerter as teams_alerter
-    test_result = teams_alerter.teams_webhook_test()
-    return jsonify(results=test_result)
+    use_case = MSTeamsNotificationTestUseCase(
+        create_notification_service()
+    )
+    use_case.execute()
+
+    # @todo Return more informative response in case of errors.
+    return jsonify(results={"success": True})

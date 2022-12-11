@@ -5,9 +5,9 @@ import pymsteams
 
 
 class MsTeamsProvider(NotificationProviderInterface):
-    def __init__(self, server_url, integration_token, **kwargs):
-        self.server_url = server_url
-        self.integration_token = integration_token
+    def __init__(self, **kwargs):
+        self.server_url = kwargs.get("server_url")
+        self.integration_token = kwargs.get("integration_token")
 
     def get_provider_name(self):
         return "ms_teams"
@@ -26,4 +26,9 @@ class MsTeamsProvider(NotificationProviderInterface):
         return leaks
 
     def send_test(self):
-        logger.info("Sent MS teams test notification")
+        message = pymsteams.connectorcard(self.integration_token)
+        message.title("Testing teams webhook by Leaktopus")
+        message.text("Testing testing, attention please")
+        message.send()
+
+        logger.info("MS teams test notification has ben sent")
