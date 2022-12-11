@@ -1,8 +1,8 @@
 import sqlite3
-from flask import Flask, g, abort
+from flask import Flask, g, abort, current_app
 import os
 import re
-from loguru import logger
+from leaktopus.utils.common_imports import logger
 import leaktopus.common.scans as scans
 import leaktopus.common.contributors as contributors
 import leaktopus.common.sensitive_keywords as sensitive_keywords
@@ -95,23 +95,6 @@ def db_install(db):
 
     # Update the DB with the latest updates version.
     db_updates.apply_db_updates(True)
-
-
-def get_db():
-    db_path = os.environ.get('DB_PATH', "/tmp/leaktopus.sqlite")
-
-    db = getattr(g, '_database', None)
-    is_db_exists = os.path.isfile(db_path)
-
-    if db is None:
-        db = g._database = sqlite3.connect(db_path, timeout=20)
-        db.create_function("REGEXP", 2, regexp)
-        db.row_factory = dict_factory
-
-        if not is_db_exists:
-            db_install(db)
-
-    return db
 
 
 def get_leak(**kwargs):
@@ -290,8 +273,32 @@ def delete_config_github_ignored(pid):
         abort(500)
 
 
+def get_db():
+    db = getattr(g, '_database', None)
+    is_db_exists = os.path.isfile(current_app.config["DATABASE_PATH"])
+
+    if db is None:
+        g._database = db = get_db_connection(current_app.config["DATABASE_PATH"])
+        # db = g._database = sqlite3.connect(db_path, timeout=20)
+        # db.create_function("REGEXP", 2, regexp)
+        # db.row_factory = dict_factory
+
+        if not is_db_exists:
+            db_install(db)
+
+    return db
+
+
+def get_db_connection(database_file_path):
+    db = sqlite3.connect(database_file_path, timeout=20)
+    db.create_function("REGEXP", 2, regexp)
+    db.row_factory = dict_factory
+    return db
+
+
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, '_database', None)
+    logger.debug("Closing DB connection, {}".format(db))
     if db is not None:
         db.close()

@@ -2,6 +2,10 @@ from leaktopus.services.leak.leak import Leak
 from leaktopus.services.notification.notification_provider import NotificationProviderInterface
 
 
+class NotificationException(Exception):
+    pass
+
+
 class NotificationService:
     def __init__(self, notification_provider: NotificationProviderInterface):
         self.notification_provider = notification_provider

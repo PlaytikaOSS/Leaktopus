@@ -17,6 +17,16 @@ HTTPS_ENABLED = os.getenv('HTTPS_ENABLED', 0)
 # MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', None)
 # MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'contact@local.host')
 
+DATABASE_PATH = os.environ.get("DB_PATH", "/tmp/leaktopus.sqlite")
+SERVICES = {
+    "notification": {
+        "providers": ["sqlite"],
+        "options": {
+            "db": True,
+        },
+    },
+}
+
 # Redis.
 REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
 

@@ -49,6 +49,13 @@ def app():
     yield create_test_app(app)
 
 
+# https://github.com/pytest-dev/pytest-flask/issues/69#issuecomment-455828955
+@pytest.fixture()
+def client(app):
+    with app.test_client() as client:
+        yield client
+
+
 @pytest.fixture()
 def runner(app):
     return app.test_cli_runner()

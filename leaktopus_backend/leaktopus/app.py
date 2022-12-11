@@ -4,15 +4,16 @@ from werkzeug.debug import DebuggedApplication
 from celery import Celery
 
 from config.celery import cronjobs
+from leaktopus.common.db_handler import close_connection
 from leaktopus.routes.github.github_api import github_api
 from leaktopus.routes.system.system_api import system_api
 from leaktopus.routes.alerts.alerts_api import alerts_api
 from leaktopus.routes.leaks.leaks_api import leaks_api
 from leaktopus.routes.scans.scans_api import scans_api
+from leaktopus.tasks.clients.celery_client import CeleryClient
 from leaktopus.utils.common_imports import logger
 import os
 from flasgger import Swagger
-
 
 
 def create_celery_app(app=None):
@@ -43,7 +44,13 @@ def create_celery_app(app=None):
     return celery
 
 
-def create_app(settings_override=None):
+def create_task_manager():
+    from leaktopus.tasks.task_manager import TaskManager
+
+    return TaskManager(CeleryClient())
+
+
+def create_app(settings_override=None, task_manager=None):
     """
     Create a Flask application using the app factory pattern.
     :param settings_override: Override settings
@@ -51,17 +58,23 @@ def create_app(settings_override=None):
     """
     app = Flask(__name__)
     # cache.init_app(app, config={'CACHE_TYPE': 'simple'})
+    logger.debug("____create_app: {} ", settings_override)
 
     app.config.from_object('config.settings')
     if settings_override:
         app.config.update(settings_override)
 
+    app.teardown_appcontext(close_connection)
+    # "/tmp/leaktopus.sqlite"
+
+    if task_manager is None:
+        with app.app_context():
+            task_manager = create_task_manager()
+
+    services_config = app.config.get("SERVICES", [])
+
     # Register all our APIs.
-    app.register_blueprint(system_api)
-    app.register_blueprint(scans_api)
-    app.register_blueprint(leaks_api)
-    app.register_blueprint(github_api)
-    app.register_blueprint(alerts_api)
+    register_routes(app, task_manager)
 
     extensions(app)
 
@@ -69,6 +82,14 @@ def create_app(settings_override=None):
         app.wsgi_app = DebuggedApplication(app.wsgi_app, evalex=True)
 
     return app
+
+
+def register_routes(app, task_manager):
+    app.register_blueprint(system_api)
+    app.register_blueprint(scans_api)
+    app.register_blueprint(leaks_api)
+    app.register_blueprint(github_api)
+    app.register_blueprint(alerts_api)
 
 
 def extensions(app):

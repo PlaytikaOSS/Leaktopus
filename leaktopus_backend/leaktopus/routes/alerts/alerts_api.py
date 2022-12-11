@@ -28,7 +28,7 @@ def send_alerts():
 
 
 @alerts_api.route("/api/alerts/teams/test", methods=['GET'])
-def test_teams_webhook():
+def teams_webhook_test():
     """API For sending an MS Teams test alert (to verify integration).
     ---
     responses:
@@ -36,4 +36,5 @@ def test_teams_webhook():
         description: Operation result with confirmation/error message.
     """
     import leaktopus.common.teams_alerter as teams_alerter
-    return jsonify(results=teams_alerter.test_teams_webhook())
+    test_result = teams_alerter.teams_webhook_test()
+    return jsonify(results=test_result)
