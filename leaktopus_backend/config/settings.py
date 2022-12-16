@@ -34,13 +34,23 @@ SERVICES = {
             "db": True,
         },
     },
-    "notification": {
-        "provider": "ms_teams",
+    "notification_factory": {
+        "provider": "notification",
         "options": {
             "db": False,
-            "integration_token": os.environ.get("TEAMS_WEBHOOK_URL"),
-            "server_url": SERVER_URL,
         },
+    },
+}
+
+NOTIFICATION_CONFIG = {
+    "ms_teams": {
+        "integration_token": os.environ.get("TEAMS_WEBHOOK_URL"),
+        "server_url": SERVER_URL,
+    },
+    "slack": {
+        "integration_token": os.environ.get("SLACK_BOT_TOKEN"),
+        "server_url": SERVER_URL,
+        "channel": os.environ.get("SLACK_CHANNEL_ID")
     },
 }
 

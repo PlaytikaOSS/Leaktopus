@@ -1,7 +1,7 @@
 from leaktopus.services.notification.notification_service import NotificationService
 
 
-class MSTeamsNotificationTestUseCase:
+class NotificationTestUseCase:
     def __init__(self, notification_service: NotificationService):
         self.notification_service = notification_service
 

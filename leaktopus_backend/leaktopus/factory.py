@@ -7,6 +7,9 @@ from leaktopus.services.leak.leak_service import LeakService
 from leaktopus.services.leak.sqlite_provider import LeakSqliteProvider
 from leaktopus.services.notification.ms_teams_provider import MsTeamsProvider
 from leaktopus.services.notification.notification_service import NotificationService
+from leaktopus.services.notification_factory.notification_factory import NotificationFactory
+from leaktopus.services.notification_factory.notification_provider import NotificationFactoryNotificationProvider
+from leaktopus.utils.common_imports import logger
 
 
 def provider_config_require_db(config):
@@ -46,19 +49,27 @@ def create_alert_provider_from_config(config):
     ](options)
 
 
-def create_notification_service():
-    notification_provider = create_notification_provider_from_config(
-        current_app.config["SERVICES"]["notification"]
-    )
-    notification_service = NotificationService(notification_provider)
-    return notification_service
-
-
-def create_notification_provider_from_config(config):
+def create_notifcation_factory_provider_from_config(config):
     options = provider_config_require_db(config)
-    # @todo Generalize to support more notification providers
-
-    return {"ms_teams": MsTeamsProvider,}[
+    return {"notification": NotificationFactoryNotificationProvider,}[
         config["provider"]
-    ](**options)
+    ](options)
 
+
+def create_notification_factory():
+    provider = create_notifcation_factory_provider_from_config(
+        current_app.config["SERVICES"]["notification_factory"]
+    )
+    service = NotificationFactory(provider)
+    return service
+
+
+def create_notification_service(provider_type) -> NotificationService:
+    notification_factory = create_notification_factory()
+    config = {}
+    if provider_type in current_app.config["NOTIFICATION_CONFIG"]:
+        config = current_app.config["NOTIFICATION_CONFIG"][provider_type]
+    logger.debug(
+        "create_notification_service: {} | {}", provider_type, config
+    )
+    return notification_factory.new(provider_type, **config)
