@@ -1,5 +1,6 @@
 from leaktopus.services.leak.leak import Leak
 from leaktopus.services.notification.notification_provider import NotificationProviderInterface
+from leaktopus.services.notification.notification_service import NotificationException
 from leaktopus.utils.common_imports import logger
 import pymsteams
 
@@ -8,6 +9,9 @@ class MsTeamsProvider(NotificationProviderInterface):
     def __init__(self, **kwargs):
         self.server_url = kwargs.get("server_url")
         self.integration_token = kwargs.get("integration_token")
+
+        if not self.integration_token:
+            raise NotificationException("MS Teams integration token (webhook) is missing.")
 
     def get_provider_name(self):
         return "ms_teams"
