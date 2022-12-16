@@ -23,7 +23,13 @@ SERVER_URL = "https" if int(HTTPS_ENABLED) else "http" + '://' + SERVER_NAME
 
 SERVICES = {
     "alert": {
-        "providers": ["sqlite"],
+        "provider": "sqlite",
+        "options": {
+            "db": True,
+        },
+    },
+    "leak": {
+        "provider": "sqlite",
         "options": {
             "db": True,
         },

@@ -40,7 +40,7 @@ class AlertSqliteProvider(AlertProviderInterface):
                     ''', (leak_id, type,))
             self.db.commit()
 
-            return get_last_id(self.db, "alert", c.lastrowid)
+            return get_last_id(self.db, "alert", c.lastrowid, "alert_id")
         except self.db.IntegrityError as err:
             self.db.rollback()
             raise AlertException("Alert already exists")

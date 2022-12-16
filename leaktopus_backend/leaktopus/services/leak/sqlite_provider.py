@@ -61,7 +61,7 @@ class LeakSqliteProvider(LeakProviderInterface):
                 ''', (url, search_query, leak_type, context, leaks, acknowledged, last_modified,))
             self.db.commit()
 
-            return get_last_id(self.db, "leak", c.lastrowid)
+            return get_last_id(self.db, "leak", c.lastrowid, "pid")
         except self.db.IntegrityError as err:
             self.db.rollback()
             raise LeakException("Leak already exists")

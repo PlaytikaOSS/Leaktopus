@@ -16,9 +16,9 @@ class MsTeamsProvider(NotificationProviderInterface):
         for leak in leaks:
             message = pymsteams.connectorcard(self.integration_token)
             message.title("A new leak has been found by Leaktopus")
-            message.text(f"A new leak has been found for the search query: {leak['search_query']}")
+            message.text(f"A new leak has been found for the search query: {leak.search_query}")
             message.addLinkButton("Click here to view leak ",
-                                  f"{self.server_url}/api/leak/{leak['pid']}")
+                                  f"{self.server_url}/api/leak/{leak.pid}")
             message.send()
 
         logger.info("Notification service handled {} new leaks", len(leaks))

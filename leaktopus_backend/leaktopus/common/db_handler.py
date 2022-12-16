@@ -26,7 +26,7 @@ def regexp(expr, item):
 def init_config_github_ignore(db):
     cursor = db.cursor()
     # Install the default ignore list.
-    cursor.execute('''INSERT INTO config_github_ignore(pattern) VALUES
+    cursor.execute('''INSERT OR IGNORE INTO config_github_ignore(pattern) VALUES
              ("^https://github.com/citp/privacy-policy-historical"),
              ("^https://github.com/haonanc/GDPR-data-collection"),
              ("^https://github.com/[\w\-]+/dmca")
@@ -40,9 +40,11 @@ def db_install(db):
     :param db:
     :return:
     """
+    logger.debug('DB installation started.')
+
     cursor = db.cursor()
     cursor.execute('''
-            CREATE TABLE leak(
+            CREATE TABLE if not exists leak(
                 pid INTEGER PRIMARY KEY AUTOINCREMENT,
                 url TEXT,
                 search_query TEXT,
@@ -55,7 +57,7 @@ def db_install(db):
             )''')
 
     cursor.execute('''
-            CREATE TABLE secret(
+            CREATE TABLE if not exists secret(
                 pid INTEGER PRIMARY KEY AUTOINCREMENT,
                 leak_id INTEGER,
                 url TEXT,
@@ -65,7 +67,7 @@ def db_install(db):
             )''')
 
     cursor.execute('''
-            CREATE TABLE domain(
+            CREATE TABLE if not exists domain(
                 pid INTEGER PRIMARY KEY AUTOINCREMENT,
                 leak_id INTEGER,
                 url TEXT,
@@ -74,11 +76,11 @@ def db_install(db):
             )''')
 
     cursor.execute('''
-            CREATE TABLE config_github_ignore(pid INTEGER PRIMARY KEY AUTOINCREMENT, pattern TEXT UNIQUE)
+            CREATE TABLE if not exists config_github_ignore(pid INTEGER PRIMARY KEY AUTOINCREMENT, pattern TEXT UNIQUE)
             ''')
 
     cursor.execute('''
-                CREATE TABLE alert(
+                CREATE TABLE if not exists alert(
                     alert_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     sent_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     leak_id INTEGER,
@@ -273,18 +275,14 @@ def delete_config_github_ignored(pid):
         abort(500)
 
 
-def get_db():
-    db = getattr(g, '_database', None)
-    is_db_exists = os.path.isfile(current_app.config["DATABASE_PATH"])
+def get_db(force_install=False):
+    db = getattr(g, "_database", None)
 
     if db is None:
         g._database = db = get_db_connection(current_app.config["DATABASE_PATH"])
-        # db = g._database = sqlite3.connect(db_path, timeout=20)
-        # db.create_function("REGEXP", 2, regexp)
-        # db.row_factory = dict_factory
 
-        if not is_db_exists:
-            db_install(db)
+        # @todo Refactor and use a migration solution.
+        db_install(db)
 
     return db
 
@@ -293,6 +291,9 @@ def get_db_connection(database_file_path):
     db = sqlite3.connect(database_file_path, timeout=20)
     db.create_function("REGEXP", 2, regexp)
     db.row_factory = dict_factory
+
+    logger.debug("Connected to SQLite DB: {}", database_file_path)
+
     return db
 
 

@@ -6,7 +6,7 @@ from datetime import datetime
 def db_install_scans(db):
     cursor = db.cursor()
     cursor.execute('''
-                CREATE TABLE scans(
+                CREATE TABLE if not exists scans(
                     scan_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     search_query TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
