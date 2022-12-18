@@ -4,7 +4,7 @@ import leaktopus.common.db_handler as dbh
 def db_install_updates(db):
     cursor = db.cursor()
     cursor.execute('''
-                CREATE TABLE updates(
+                CREATE TABLE if not exists updates(
                     update_id TEXT PRIMARY KEY,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     status INTEGER

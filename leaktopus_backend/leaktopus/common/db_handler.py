@@ -1,8 +1,8 @@
 import sqlite3
-from flask import Flask, g, abort
+from flask import Flask, g, abort, current_app
 import os
 import re
-from loguru import logger
+from leaktopus.utils.common_imports import logger
 import leaktopus.common.scans as scans
 import leaktopus.common.contributors as contributors
 import leaktopus.common.sensitive_keywords as sensitive_keywords
@@ -26,7 +26,7 @@ def regexp(expr, item):
 def init_config_github_ignore(db):
     cursor = db.cursor()
     # Install the default ignore list.
-    cursor.execute('''INSERT INTO config_github_ignore(pattern) VALUES
+    cursor.execute('''INSERT OR IGNORE INTO config_github_ignore(pattern) VALUES
              ("^https://github.com/citp/privacy-policy-historical"),
              ("^https://github.com/haonanc/GDPR-data-collection"),
              ("^https://github.com/[\w\-]+/dmca")
@@ -40,9 +40,11 @@ def db_install(db):
     :param db:
     :return:
     """
+    logger.debug('DB installation started.')
+
     cursor = db.cursor()
     cursor.execute('''
-            CREATE TABLE leak(
+            CREATE TABLE if not exists leak(
                 pid INTEGER PRIMARY KEY AUTOINCREMENT,
                 url TEXT,
                 search_query TEXT,
@@ -55,7 +57,7 @@ def db_install(db):
             )''')
 
     cursor.execute('''
-            CREATE TABLE secret(
+            CREATE TABLE if not exists secret(
                 pid INTEGER PRIMARY KEY AUTOINCREMENT,
                 leak_id INTEGER,
                 url TEXT,
@@ -65,7 +67,7 @@ def db_install(db):
             )''')
 
     cursor.execute('''
-            CREATE TABLE domain(
+            CREATE TABLE if not exists domain(
                 pid INTEGER PRIMARY KEY AUTOINCREMENT,
                 leak_id INTEGER,
                 url TEXT,
@@ -74,11 +76,11 @@ def db_install(db):
             )''')
 
     cursor.execute('''
-            CREATE TABLE config_github_ignore(pid INTEGER PRIMARY KEY AUTOINCREMENT, pattern TEXT UNIQUE)
+            CREATE TABLE if not exists config_github_ignore(pid INTEGER PRIMARY KEY AUTOINCREMENT, pattern TEXT UNIQUE)
             ''')
 
     cursor.execute('''
-                CREATE TABLE alert(
+                CREATE TABLE if not exists alert(
                     alert_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     sent_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     leak_id INTEGER,
@@ -95,60 +97,6 @@ def db_install(db):
 
     # Update the DB with the latest updates version.
     db_updates.apply_db_updates(True)
-
-
-def get_db():
-    db_path = os.environ.get('DB_PATH', "/tmp/leaktopus.sqlite")
-
-    db = getattr(g, '_database', None)
-    is_db_exists = os.path.isfile(db_path)
-
-    if db is None:
-        db = g._database = sqlite3.connect(db_path, timeout=20)
-        db.create_function("REGEXP", 2, regexp)
-        db.row_factory = dict_factory
-
-        if not is_db_exists:
-            db_install(db)
-
-    return db
-
-
-def get_alert(**kwargs):
-    try:
-        sql_cond = []
-        sql_vars = ()
-        for col in kwargs.keys():
-            sql_vars = (*sql_vars, kwargs[col])
-            sql_cond.append(col)
-
-        cur = get_db().cursor()
-        if sql_vars:
-            where_str = ("=? AND ").join(sql_cond) + "=?"
-            res = cur.execute("SELECT * FROM alert WHERE " + where_str, sql_vars)
-        else:
-            res = cur.execute('''SELECT * FROM alert''')
-        return res.fetchall()
-
-    except Exception as e:
-        abort(500)
-
-
-def add_alert(leak_id, type):
-    try:
-        # Insert or ignore if already exists
-        db = get_db()
-
-        cursor = db.cursor()
-        cursor.execute('''
-                INSERT OR IGNORE INTO alert(leak_id, "type")
-                    VALUES(?,?)
-                ''', (leak_id, type,))
-        db.commit()
-        return cursor.lastrowid
-
-    except Exception as e:
-        abort(500)
 
 
 def get_leak(**kwargs):
@@ -327,8 +275,31 @@ def delete_config_github_ignored(pid):
         abort(500)
 
 
+def get_db(force_install=False):
+    db = getattr(g, "_database", None)
+
+    if db is None:
+        g._database = db = get_db_connection(current_app.config["DATABASE_PATH"])
+
+        # @todo Refactor and use a migration solution.
+        db_install(db)
+
+    return db
+
+
+def get_db_connection(database_file_path):
+    db = sqlite3.connect(database_file_path, timeout=20)
+    db.create_function("REGEXP", 2, regexp)
+    db.row_factory = dict_factory
+
+    logger.debug("Connected to SQLite DB: {}", database_file_path)
+
+    return db
+
+
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, '_database', None)
+    logger.debug("Closing DB connection, {}".format(db))
     if db is not None:
         db.close()

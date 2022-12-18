@@ -17,6 +17,37 @@ HTTPS_ENABLED = os.getenv('HTTPS_ENABLED', 0)
 # MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', None)
 # MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'contact@local.host')
 
+DATABASE_PATH = os.environ.get("DB_PATH", "/tmp/leaktopus.sqlite")
+
+SERVER_URL = "https" if int(HTTPS_ENABLED) else "http" + '://' + SERVER_NAME
+
+SERVICES = {
+    "alert": {
+        "provider": "sqlite",
+        "options": {
+            "db": True,
+        },
+    },
+    "leak": {
+        "provider": "sqlite",
+        "options": {
+            "db": True,
+        },
+    }
+}
+
+NOTIFICATION_CONFIG = {
+    "ms_teams": {
+        "integration_token": os.environ.get("TEAMS_WEBHOOK_URL"),
+        "server_url": SERVER_URL,
+    },
+    "slack": {
+        "integration_token": os.environ.get("SLACK_BOT_TOKEN"),
+        "server_url": SERVER_URL,
+        "channel": os.environ.get("SLACK_CHANNEL_ID")
+    },
+}
+
 # Redis.
 REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
 
@@ -24,13 +55,6 @@ REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
 CELERY_CONFIG = {
     'broker_url': REDIS_URL,
     'result_backend': REDIS_URL,
-    'include': [
-        'leaktopus.common.scanner_async',
-        'leaktopus.common.github_indexer',
-        'leaktopus.common.leak_enhancer',
-        'leaktopus.common.teams_alerter',
-        'leaktopus.common.cron'
-    ],
     'task_serializer': 'pickle',
     'result_serializer': 'pickle',
     'accept_content': ['pickle'],

@@ -1,5 +1,11 @@
 from flask import Blueprint, jsonify, request, abort, current_app
 
+from leaktopus.factory import create_notification_service, create_leak_service, create_alert_service
+from leaktopus.services.notification.notification_service import NotificationException
+from leaktopus.tasks.send_alerts_notification_task import SendAlertsNotificationTask
+from leaktopus.usecases.notification_test import NotificationTestUseCase
+from leaktopus.utils.common_imports import logger
+
 alerts_api = Blueprint('alerts_api', __name__)
 
 
@@ -9,7 +15,7 @@ def custom500(error):
 
 
 @alerts_api.route("/api/alerts/send", methods=['GET'])
-def send_alerts():
+def send_notifications():
     """API For manually send pending alerts.
     ---
     responses:
@@ -18,22 +24,55 @@ def send_alerts():
         examples:
           {"results": {"message": "Sent X new alertsֿ","success": true}}
     """
-    import leaktopus.common.teams_alerter as teams_alerter
+    notification_providers_sent = []
+
+    leak_service = create_leak_service()
+    alert_service = create_alert_service()
+    for notification_provider in current_app.config["NOTIFICATION_CONFIG"].keys():
+        try:
+            notification_service = create_notification_service(notification_provider)
+            leaks_notified = SendAlertsNotificationTask(
+                leak_service,
+                alert_service,
+                notification_service
+            ).run()
+
+            notification_providers_sent.append(notification_service.get_provider_name())
+        except NotificationException as e:
+            logger.warning("Cannot send alerts notification via send_notifications route. Message: {}", e)
+        except Exception as e:
+            logger.error("Error sending alerts notification via send_notifications route. Message: {}", e)
+
+    if len(notification_providers_sent) > 0:
+        message = "Sent new alerts via {}".format(','.join(notification_providers_sent))
+    else:
+        message = "No alerts were sent."
+
     results = {
         "success": True,
-        "message": teams_alerter.alert()
+        "message": message
     }
 
     return jsonify(results=results)
 
 
-@alerts_api.route("/api/alerts/teams/test", methods=['GET'])
-def test_teams_webhook():
-    """API For sending an MS Teams test alert (to verify integration).
+@alerts_api.route("/api/alerts/<integration_type>/test", methods=['GET'])
+def notification_test(integration_type):
+    """API For sending a notification test alert (to verify integration).
     ---
+    parameters:
+      - name: integration_type
+        in: path
+        type: string
+        required: true
     responses:
       200:
         description: Operation result with confirmation/error message.
     """
-    import leaktopus.common.teams_alerter as teams_alerter
-    return jsonify(results=teams_alerter.test_teams_webhook())
+    use_case = NotificationTestUseCase(
+        create_notification_service(integration_type)
+    )
+    use_case.execute()
+
+    # @todo Return more informative response in case of errors.
+    return jsonify(results={"success": True})

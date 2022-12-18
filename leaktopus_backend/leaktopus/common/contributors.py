@@ -4,7 +4,7 @@ import leaktopus.common.db_handler as dbh
 def db_install_contributors(db):
     cursor = db.cursor()
     cursor.execute('''
-            CREATE TABLE contributors(
+            CREATE TABLE if not exists contributors(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 leak_id INTEGER,
                 name TEXT,
