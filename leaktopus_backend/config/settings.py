@@ -33,13 +33,7 @@ SERVICES = {
         "options": {
             "db": True,
         },
-    },
-    "notification_factory": {
-        "provider": "notification",
-        "options": {
-            "db": False,
-        },
-    },
+    }
 }
 
 NOTIFICATION_CONFIG = {

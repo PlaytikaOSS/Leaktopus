@@ -1,6 +1,5 @@
 from leaktopus.factory import create_leak_service, create_alert_service, create_notification_service
 from leaktopus.services.leak.leak_service import LeakService
-from leaktopus.utils.common_imports import logger
 from leaktopus.tasks.send_alerts_notification_task import SendAlertsNotificationTask
 
 

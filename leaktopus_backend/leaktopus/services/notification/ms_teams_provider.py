@@ -5,7 +5,7 @@ from leaktopus.utils.common_imports import logger
 import pymsteams
 
 
-class MsTeamsProvider(NotificationProviderInterface):
+class NotificationMsTeamsProvider(NotificationProviderInterface):
     def __init__(self, **kwargs):
         self.server_url = kwargs.get("server_url")
         self.integration_token = kwargs.get("integration_token")

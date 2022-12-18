@@ -5,10 +5,10 @@ from leaktopus.services.alert.alert_service import AlertService
 from leaktopus.services.alert.sqlite_provider import AlertSqliteProvider
 from leaktopus.services.leak.leak_service import LeakService
 from leaktopus.services.leak.sqlite_provider import LeakSqliteProvider
-from leaktopus.services.notification.ms_teams_provider import MsTeamsProvider
+from leaktopus.services.notification.memory_provider import NotificationMemoryProvider
+from leaktopus.services.notification.ms_teams_provider import NotificationMsTeamsProvider
 from leaktopus.services.notification.notification_service import NotificationService
-from leaktopus.services.notification_factory.notification_factory import NotificationFactory
-from leaktopus.services.notification_factory.notification_provider import NotificationFactoryNotificationProvider
+from leaktopus.services.notification.slack_provider import NotificationSlackProvider
 from leaktopus.utils.common_imports import logger
 
 
@@ -49,27 +49,22 @@ def create_alert_provider_from_config(config):
     ](options)
 
 
-def create_notifcation_factory_provider_from_config(config):
-    options = provider_config_require_db(config)
-    return {"notification": NotificationFactoryNotificationProvider,}[
-        config["provider"]
-    ](options)
+def create_notification_provider_from_config(config, provider_type):
+    supported_providers = {
+        "ms_teams": NotificationMsTeamsProvider,
+        "slack": NotificationSlackProvider
+    }
 
+    if provider_type not in config.keys() or provider_type not in supported_providers:
+        raise Exception("Unsupported notification provider {}".format(provider_type))
 
-def create_notification_factory():
-    provider = create_notifcation_factory_provider_from_config(
-        current_app.config["SERVICES"]["notification_factory"]
-    )
-    service = NotificationFactory(provider)
-    return service
+    return supported_providers[provider_type](**config[provider_type])
 
 
 def create_notification_service(provider_type) -> NotificationService:
-    notification_factory = create_notification_factory()
-    config = {}
-    if provider_type in current_app.config["NOTIFICATION_CONFIG"]:
-        config = current_app.config["NOTIFICATION_CONFIG"][provider_type]
-    logger.debug(
-        "create_notification_service: {} | {}", provider_type, config
+    provider = create_notification_provider_from_config(
+        current_app.config["NOTIFICATION_CONFIG"],
+        provider_type
     )
-    return notification_factory.new(provider_type, **config)
+    notification_service = NotificationService(provider)
+    return notification_service

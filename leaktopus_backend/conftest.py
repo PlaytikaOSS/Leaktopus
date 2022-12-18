@@ -7,8 +7,6 @@ from leaktopus.services.leak.leak_service import LeakService
 from leaktopus.services.leak.memory_provider import LeakMemoryProvider
 from leaktopus.services.notification.memory_provider import NotificationMemoryProvider
 from leaktopus.services.notification.notification_service import NotificationService
-from leaktopus.services.notification_factory.memory_provider import NotificationFactoryMemoryProvider
-from leaktopus.services.notification_factory.notification_factory import NotificationFactory
 
 from leaktopus.tasks.clients.memory_client import MemoryClient
 from leaktopus.tasks.task_manager import TaskManager
@@ -82,16 +80,17 @@ def factory_alert_service():
 
 
 @pytest.fixture()
-def factory_notification_factory():
-    return lambda override_methods={}: NotificationFactory(
-        NotificationFactoryMemoryProvider(
-            override_methods=override_methods,
-        )
-    )
-
-
-@pytest.fixture()
 def factory_task_manager():
     return lambda override_tasks={}: TaskManager(
         MemoryClient(override_tasks=override_tasks)
+    )
+
+
+@pytest.fixture
+def factory_notification_service():
+    return lambda override_methods={}: NotificationService(
+        NotificationMemoryProvider(
+            override_methods=override_methods,
+            server_url="http://localhost"
+        )
     )

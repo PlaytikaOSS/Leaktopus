@@ -5,7 +5,7 @@ from leaktopus.utils.common_imports import logger
 from slack_sdk import WebClient
 
 
-class SlackProvider(NotificationProviderInterface):
+class NotificationSlackProvider(NotificationProviderInterface):
     def __init__(self, **kwargs):
         self.server_url = kwargs.get("server_url")
         self.integration_token = kwargs.get("integration_token")
