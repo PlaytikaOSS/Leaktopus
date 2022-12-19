@@ -60,4 +60,5 @@ CELERY_CONFIG = {
     'accept_content': ['pickle'],
     'result_accept_content': ['pickle'],
     'task_max_retries': None,
+    'task_always_eager': os.getenv('CELERY_ALWAYS_EAGER', False),
 }

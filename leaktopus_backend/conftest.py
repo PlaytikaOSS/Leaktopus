@@ -12,41 +12,14 @@ from leaktopus.tasks.clients.memory_client import MemoryClient
 from leaktopus.tasks.task_manager import TaskManager
 
 
-def create_test_app(app, tmpdir):
-    app.config.update(
-        {
-            "TESTING": True,
-            "DATABASE_PATH": tmpdir.join("test.db"),
-            "CELERY_CONFIG": {
-                "task_always_eager": True,
-            }
-            # "SERVICES": {}
-        }
-    )
-    # other setup can go here
-    return app
-
-
-@pytest.fixture()
-def app_integration():
-    app = create_app(
-        settings_override={
-            "TESTING": True,
-            "DATABASE_PATH": ":memory:",
-            "CELERY_CONFIG": {
-                "task_always_eager": True,
-            }
-            # "SERVICES": {}
-        }
-    )  # task_manager=task_manager)
-    yield create_test_app(app)
-
 
 @pytest.fixture(name="app")
-def app(tmpdir):
+def app():
     task_manager = TaskManager(MemoryClient(override_tasks={"run_task": lambda: None}))
-    app = create_app(task_manager=task_manager)
-    yield create_test_app(app, tmpdir)
+    app = create_app(task_manager=task_manager, settings_override={
+        "TESTING": True
+    })
+    yield app
 
 
 # https://github.com/pytest-dev/pytest-flask/issues/69#issuecomment-455828955
