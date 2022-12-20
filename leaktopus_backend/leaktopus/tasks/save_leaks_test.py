@@ -33,7 +33,7 @@ class EmailExtractor:
     def extract_emails_from_content(self, content):
         return re.findall(r'[\w\.-]+@[\w\.-]+\.\w+', content)
 
-class SaveLeaksTask():
+class SaveLeaksUseCase():
     def __init__(self, leak_service: LeakService, email_extractor: EmailExtractor):
         self.leak_service = leak_service
         self.email_extractor = email_extractor
@@ -100,7 +100,7 @@ def test_should_save_leaks_successfully(search_results):
         "example.org",
     ]
     search_query = "test"
-    task = SaveLeaksTask(
+    use_case = SaveLeaksUseCase(
         leak_service=LeakService(LeakMemoryProvider(
             override_methods={
                 "save_leaks": lambda leaks: None
@@ -108,7 +108,7 @@ def test_should_save_leaks_successfully(search_results):
         )),
         email_extractor=EmailExtractor(organization_domains=organization_domains)
     )
-    grouped_results = task.run(search_results=search_results, search_query=search_query)
+    grouped_results = use_case.run(search_results=search_results, search_query=search_query)
 
     assert len(grouped_results) == 2
 
