@@ -44,21 +44,23 @@ NOTIFICATION_CONFIG = {
     "slack": {
         "integration_token": os.environ.get("SLACK_BOT_TOKEN"),
         "server_url": SERVER_URL,
-        "channel": os.environ.get("SLACK_CHANNEL_ID")
+        "channel": os.environ.get("SLACK_CHANNEL_ID"),
     },
 }
 
 # Redis.
-REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
 # Celery.
 CELERY_CONFIG = {
-    'broker_url': REDIS_URL,
-    'result_backend': REDIS_URL,
-    'task_serializer': 'pickle',
-    'result_serializer': 'pickle',
-    'accept_content': ['pickle'],
-    'result_accept_content': ['pickle'],
-    'task_max_retries': None,
-    'task_always_eager': os.getenv('CELERY_ALWAYS_EAGER', False),
+    "broker_url": REDIS_URL,
+    "result_backend": REDIS_URL,
+    "task_serializer": "pickle",
+    "result_serializer": "pickle",
+    "accept_content": ["pickle"],
+    "result_accept_content": ["pickle"],
+    "task_max_retries": None,
+    "task_always_eager": os.getenv("CELERY_ALWAYS_EAGER", False),
+    "task_store_eager_result": os.getenv("CELERY_ALWAYS_EAGER", False),
+    "task_eager_propagates": os.getenv("CELERY_ALWAYS_EAGER", False),
 }

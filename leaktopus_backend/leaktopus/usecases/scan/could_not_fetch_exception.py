@@ -1,0 +1,2 @@
+class CouldNotFetchException(Exception):
+    pass
