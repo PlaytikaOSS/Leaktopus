@@ -9,9 +9,6 @@ from leaktopus.services.leak.memory_provider import LeakMemoryProvider
 
 # TODO:
 # - SaveLeaksTask should use a structured search result object, e.g [SearchResult, ...]
-# - SaveLeaksTask should use a structured leak object, e.g [Leak, ...]
-# - SaveLeaksTask shouldn't return a list of anything, as it should only be used to save leaks
-# - Adjust def save_leaks(self, leaks) to use the new leak object
 # Obvious tasks:
 # - Add more tests
 # - Extract clases to files/structure
