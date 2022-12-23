@@ -7,46 +7,19 @@ from leaktopus.services.leak.leak_service import LeakService
 from leaktopus.services.leak.memory_provider import LeakMemoryProvider
 from leaktopus.services.notification.memory_provider import NotificationMemoryProvider
 from leaktopus.services.notification.notification_service import NotificationService
+from leaktopus.services.potential_leak_source_scan_status.potential_leak_source_scan_status_provider_interface import (
+    PotentialLeakSourceScanStatusProviderInterface,
+)
 
 from leaktopus.tasks.clients.memory_client import MemoryClient
 from leaktopus.tasks.task_manager import TaskManager
 
 
-def create_test_app(app, tmpdir):
-    app.config.update(
-        {
-            "TESTING": True,
-            "DATABASE_PATH": tmpdir.join("test.db"),
-            "CELERY_CONFIG": {
-                "task_always_eager": True,
-            }
-            # "SERVICES": {}
-        }
-    )
-    # other setup can go here
-    return app
-
-
-@pytest.fixture()
-def app_integration():
-    app = create_app(
-        settings_override={
-            "TESTING": True,
-            "DATABASE_PATH": ":memory:",
-            "CELERY_CONFIG": {
-                "task_always_eager": True,
-            }
-            # "SERVICES": {}
-        }
-    )  # task_manager=task_manager)
-    yield create_test_app(app)
-
-
 @pytest.fixture(name="app")
-def app(tmpdir):
+def app():
     task_manager = TaskManager(MemoryClient(override_tasks={"run_task": lambda: None}))
-    app = create_app(task_manager=task_manager)
-    yield create_test_app(app, tmpdir)
+    app = create_app(task_manager=task_manager, settings_override={"TESTING": True})
+    yield app
 
 
 # https://github.com/pytest-dev/pytest-flask/issues/69#issuecomment-455828955
@@ -90,7 +63,13 @@ def factory_task_manager():
 def factory_notification_service():
     return lambda override_methods={}: NotificationService(
         NotificationMemoryProvider(
-            override_methods=override_methods,
-            server_url="http://localhost"
+            override_methods=override_methods, server_url="http://localhost"
         )
+    )
+
+
+@pytest.fixture
+def potential_leak_source_scan_status_provider_mock(mocker):
+    return mocker.patch.object(
+        PotentialLeakSourceScanStatusProviderInterface, "get_status"
     )

@@ -25,6 +25,22 @@ class LeakMemoryProvider(LeakProviderInterface):
             else filtered_leaks
         )
 
+    def save_leaks(self, leaks):
+        if "save_leaks" in self.override_methods:
+            return self.override_methods["save_leaks"](leaks)
+
+        for leak in leaks:
+            self.add_leak(
+                leak.url,
+                leak.search_query,
+                leak.leak_type,
+                leak.context,
+                leak.leaks,
+                leak.acknowledged,
+                leak.last_modified,
+                **leak
+            )
+
     def add_leak(self, url, search_query, leak_type, context, leaks, acknowledged, last_modified, **kwargs):
         pid = len(self.leaks)+1
         now = datetime.datetime.now()

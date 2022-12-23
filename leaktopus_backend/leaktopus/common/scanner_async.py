@@ -18,7 +18,7 @@ MIN_NON_ORG_EMAIL = 5
 MIN_DOMAINS_NUMBER = 150
 
 
-def github_datetime_to_timestamp(github_datetime):
+def datetime_to_timestamp(github_datetime):
     last_modified_datetime = datetime.strptime(github_datetime, '%a, %d %b %Y %H:%M:%S %Z')
     return datetime.timestamp(last_modified_datetime)
 
@@ -58,7 +58,7 @@ def save_gh_leaks(code_results, search_query, organization_domains):
         else:
             grouped_results.append({
                 "url": clone_url,
-                "last_modified": github_datetime_to_timestamp(res.repository.last_modified),
+                "last_modified": datetime_to_timestamp(res.repository.last_modified),
                 "leaks": [leak_data],
                 "search_query": search_query,
                 "type": "github",
@@ -441,7 +441,7 @@ def is_repo_requires_scan(repo):
 
     # Check if the repository was modified since the previous scan.
     known_last_modified = last_known_leak["last_modified"]
-    last_modified = github_datetime_to_timestamp(repo.repository.last_modified)
+    last_modified = datetime_to_timestamp(repo.repository.last_modified)
     if last_modified > known_last_modified:
         return True
 
