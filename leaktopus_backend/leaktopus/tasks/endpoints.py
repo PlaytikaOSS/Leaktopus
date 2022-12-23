@@ -12,9 +12,6 @@ from leaktopus.services.potential_leak_source_scan_status.sqlite_potential_leak_
 from leaktopus.tasks.celery.scan.celery_potential_leak_source_page_results_fetcher import (
     CeleryPotentialLeakSourcePageResultsFetcher,
 )
-from leaktopus.tasks.celery.scan.celery_potential_leak_source_page_results_saver import (
-    CeleryPotentialLeakSourcePageResultsSaver,
-)
 from leaktopus.tasks.celery.scan.celery_search_results_dispatcher import (
     CelerySearchResultsDispatcher,
 )
@@ -28,6 +25,9 @@ from leaktopus.usecases.scan.could_not_fetch_exception import CouldNotFetchExcep
 
 from leaktopus.usecases.scan.fetch_potential_leak_source_page_use_case import (
     FetchPotentialLeakSourcePageUseCase,
+)
+from leaktopus.usecases.scan.save_potential_leak_source_page_use_case_test import (
+    SavePotentialLeakSourcePageUseCase,
 )
 from leaktopus.usecases.scan.trigger_pages_scan_use_case import (
     CollectPotentialLeakSourcePagesUseCase,
@@ -48,7 +48,7 @@ def send_alerts_notification_task_endpoint():
     except NotificationException as ne:
         logger.warning("Couldn't send alerts notification. Reason: {}", ne)
     except Exception as e:
-        logger.errpr("Error when trying to send alerts notification. Error: {}", e)
+        logger.error("Error when trying to send alerts notification. Error: {}", e)
 
 
 @shared_task
@@ -79,17 +79,18 @@ def fetch_potential_leak_source_page_task_endpoint(self, results, page_num, scan
             provider=SqlitePotentialLeakSourceScanStatusProvider()
         ),
         potential_leak_source_page_results_fetcher=CeleryPotentialLeakSourcePageResultsFetcher(),
-        potential_leak_source_page_results_saver=CeleryPotentialLeakSourcePageResultsSaver(
-            client=client
-        ),
     )
     logger.debug("Fetching page {} for scan_id: {}", page_num, scan_id)
-    response = use_case.execute(results, page_num, scan_id)
-    return response
+    page_results = use_case.execute(results, page_num, scan_id)
+    save_potential_leak_source_page_results_task_endpoint.s(
+        page_results=page_results, scan_id=scan_id
+    ).apply_async()
 
 
 @shared_task
 def save_potential_leak_source_page_results_task_endpoint(page_results, scan_id):
     logger.debug("Saving page results for scan_id: {}", scan_id)
-    # use_case = SaveSCMPageResultsUseCase()
-    # use_case.execute(page_results, scan_id)
+    use_case = SavePotentialLeakSourcePageUseCase(
+        leak_service=create_leak_service(),
+    )
+    use_case.execute(scan_id, page_results)

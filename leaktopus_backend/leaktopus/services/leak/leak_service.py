@@ -15,8 +15,8 @@ class LeakService:
     def add_leak(self, url, search_query, leak_type, context, leaks, acknowledged, last_modified, **kwargs):
         return self.leak_provider.add_leak(url, search_query, leak_type, context, leaks, acknowledged, last_modified, **kwargs)
 
-    def save_leaks(self, leaks):
-        return self.leak_provider.save_leaks(leaks)
+    def save_leaks(self, scan_id,leaks):
+        return self.leak_provider.save_leaks(scan_id,leaks)
     def update_leak(self, leak_id, **kwargs):
         return self.leak_provider.update_leak(leak_id, **kwargs)
 
