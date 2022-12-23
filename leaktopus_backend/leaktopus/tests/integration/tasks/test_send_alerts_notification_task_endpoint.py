@@ -3,20 +3,10 @@ from leaktopus.services.leak.leak_service import LeakService
 from leaktopus.tasks.send_alerts_notification_task import SendAlertsNotificationTask
 
 
-def add_leak(leak_service: LeakService):
-    return leak_service.add_leak(
-        "https://leakexample.com",
-        "leaktopus-integration-test",
-        "github",
-        "",
-        "",
-        False,
-        "2000-01-01 00:00:00"
-    )
-
-
 def test_send_alerts_notification_task_endpoint_with_success(
-    app, client
+    app,
+    client,
+    add_leak
 ):
     # Add leaks
     # Run task
