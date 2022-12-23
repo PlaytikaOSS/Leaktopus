@@ -22,6 +22,7 @@ class CelerySearchResultsDispatcher(SearchResultsDispatcherInterface):
                     results=initial_search_metadata["results"],
                     page_num=page_num,
                     scan_id=scan_id,
+                    search_query=initial_search_metadata["search_query"],
                 )
             )
         logger.debug("Dispatching {} tasks", len(tasks))

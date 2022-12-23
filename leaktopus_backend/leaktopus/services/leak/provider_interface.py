@@ -9,10 +9,6 @@ class LeakProviderInterface(Protocol):
         pass
 
     @abstractmethod
-    def get_leak(self, **kwargs) -> list[Leak]:
-        pass
-
-    @abstractmethod
     def add_leak(
         self,
         url,
