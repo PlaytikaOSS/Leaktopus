@@ -1,13 +1,8 @@
+import json
+
 from celery import shared_task
 
 from leaktopus.app import create_celery_app
-from leaktopus.common import leak_enhancer
-from leaktopus.services.ignore_pattern.ignore_pattern_service import (
-    IgnorePatternService,
-)
-from leaktopus.services.ignore_pattern.sqlite_ignore_pattern_provider import (
-    SqliteIgnorePatternProvider,
-)
 from leaktopus.services.notification.notification_service import NotificationException
 from leaktopus.services.potential_leak_source_scan_status.potential_leak_source_scan_status_service import (
     PotentialLeakSourceScanStatusService,
@@ -34,6 +29,7 @@ from leaktopus.factory import (
     create_alert_service,
     create_ignore_pattern_service,
     create_leaktopus_config_service,
+    create_potential_leak_source_scan_status_service,
 )
 from leaktopus.usecases.scan.could_not_fetch_exception import CouldNotFetchException
 from leaktopus.usecases.scan.domain_extractor import DomainExtractor
@@ -75,10 +71,11 @@ def trigger_pages_scan_task_endpoint(
     logger.debug(
         "Triggering pages scan for scan_id: {}", potential_leak_source_request.scan_id
     )
+    potential_leak_source_scan_status_service = (
+        create_potential_leak_source_scan_status_service()
+    )
     use_case = CollectPotentialLeakSourcePagesUseCase(
-        potential_leak_source_scan_status_service=PotentialLeakSourceScanStatusService(
-            provider=SqlitePotentialLeakSourceScanStatusProvider()
-        ),
+        potential_leak_source_scan_status_service=potential_leak_source_scan_status_service,
         search_results_dispatcher=CelerySearchResultsDispatcher(client=client),
     )
     use_case.execute(initial_search_metadata, potential_leak_source_request)
@@ -90,32 +87,42 @@ def trigger_pages_scan_task_endpoint(
     auto_retry_for=(CouldNotFetchException,),
 )
 def fetch_potential_leak_source_page_task_endpoint(
-    self, results, page_num, potential_leak_source_request: PotentialLeakSourceRequest
+    self,
+    current_page_number,
+    results,
+    number_of_pages,
+    potential_leak_source_request: PotentialLeakSourceRequest,
 ):
     client = create_celery_app()
     logger.debug(
         "Fetching page {} for scan_id: {}",
-        page_num,
+        current_page_number,
         potential_leak_source_request.scan_id,
     )
+    potential_leak_source_scan_status_service = (
+        create_potential_leak_source_scan_status_service()
+    )
     use_case = FetchPotentialLeakSourcePageUseCase(
-        potential_leak_source_scan_status_service=PotentialLeakSourceScanStatusService(
-            provider=SqlitePotentialLeakSourceScanStatusProvider()
-        ),
+        potential_leak_source_scan_status_service=potential_leak_source_scan_status_service,
         potential_leak_source_page_results_fetcher=GithubPotentialLeakSourcePageResultsFetcher(),
     )
     page_results = use_case.execute(
-        results, page_num, potential_leak_source_request.scan_id
+        results, current_page_number, potential_leak_source_request.scan_id
     )
     save_potential_leak_source_page_results_task_endpoint.s(
         page_results=page_results,
+        current_page_number=current_page_number,
+        number_of_pages=number_of_pages,
         potential_leak_source_request=potential_leak_source_request,
     ).apply_async()
 
 
 @shared_task
 def save_potential_leak_source_page_results_task_endpoint(
-    page_results, potential_leak_source_request: PotentialLeakSourceRequest
+    page_results,
+    number_of_pages,
+    current_page_number,
+    potential_leak_source_request: PotentialLeakSourceRequest,
 ):
     logger.debug(
         "Saving page results for scan_id: {}", potential_leak_source_request.scan_id
@@ -126,6 +133,9 @@ def save_potential_leak_source_page_results_task_endpoint(
         organization_domains=potential_leak_source_request.organization_domains
     )
     leaktopus_config_service = create_leaktopus_config_service()
+    potential_leak_source_scan_status_service = (
+        create_potential_leak_source_scan_status_service()
+    )
     use_case = SavePotentialLeakSourcePageUseCase(
         leak_service=leak_service,
         potential_leak_source_filter=GithubPotentialLeakSourceFilter(
@@ -136,22 +146,53 @@ def save_potential_leak_source_page_results_task_endpoint(
             leaktopus_config_service=leaktopus_config_service,
         ),
         email_extractor=email_extractor,
+        potential_leak_source_scan_status_service=potential_leak_source_scan_status_service,
     )
     use_case.execute(
         potential_leak_source_request.scan_id,
         page_results,
         potential_leak_source_request.search_query,
+        current_page_number,
     )
 
+    # This part should be refactored. Currently it's a shortcut to support the same behavior as before.
+    # The idea is to enhance only if all pages have been scanned i.e set to ANALYZED
     from leaktopus.common.scanner_async import (
         gh_get_repos_full_names,
         update_scan_status_async,
     )
     from leaktopus.common.github_indexer import github_index_commits
+    from leaktopus.common.leak_enhancer import leak_enhancer
+
+    pages_analyzing_count = (
+        potential_leak_source_scan_status_service.get_analyzing_count(
+            potential_leak_source_request.scan_id
+        )
+    )
+    if pages_analyzing_count < number_of_pages:
+        logger.debug(
+            "Still not Analyzing leaks for scan_id: {} ({} / {})",
+            potential_leak_source_request.scan_id,
+            pages_analyzing_count,
+            number_of_pages,
+        )
+        return
+
+    logger.debug(
+        "Analyzing leaks for scan_id: {}", potential_leak_source_request.scan_id
+    )
+
+    repos_full_names = []
+    leaks = leak_service.get_leaks(
+        search_query=potential_leak_source_request.search_query
+    )
+    for leak in leaks:
+        context = json.loads(leak.context)
+        repos_full_names.append(context["owner"] + "/" + context["repo_name"])
 
     chain = (
-        gh_get_repos_full_names.s()
-        | leak_enhancer.s(
+        leak_enhancer.s(
+            repos_full_names=repos_full_names,
             scan_id=potential_leak_source_request.scan_id,
             organization_domains=potential_leak_source_request.organization_domains,
             sensitive_keywords=potential_leak_source_request.sensitive_keywords,
@@ -160,3 +201,4 @@ def save_potential_leak_source_page_results_task_endpoint(
         | github_index_commits.s(scan_id=potential_leak_source_request.scan_id)
         | update_scan_status_async.s(scan_id=potential_leak_source_request.scan_id)
     )
+    chain.apply_async()

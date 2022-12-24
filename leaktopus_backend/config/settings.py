@@ -47,6 +47,9 @@ SERVICES = {
             "max_star_count": 2,
         },
     },
+    "potential_leak_source_scan_status": {
+        "providers": ["sqlite"],
+    },
 }
 
 NOTIFICATION_CONFIG = {

@@ -21,10 +21,13 @@ class FetchPotentialLeakSourcePageUseCase:
             potential_leak_source_page_results_fetcher
         )
 
-    def execute(self, results, page_num, scan_id):
+    def execute(self, results, page_number, scan_id):
         self.guard_scan_is_aborting(scan_id)
+        self.potential_leak_source_scan_status_service.mark_as_started(
+            scan_id, page_number
+        )
         page_results = self.potential_leak_source_page_results_fetcher.fetch(
-            results, page_num, scan_id
+            results, page_number, scan_id
         )
         return page_results
 

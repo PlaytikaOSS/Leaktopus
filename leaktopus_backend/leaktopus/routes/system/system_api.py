@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, abort, current_app
 
-system_api = Blueprint('system_api', __name__)
+system_api = Blueprint("system_api", __name__)
 
 
 @system_api.errorhandler(500)
@@ -8,7 +8,7 @@ def custom500(error):
     return jsonify(results={"success": False, "message": error.description})
 
 
-@system_api.route('/up')
+@system_api.route("/up")
 def up():
     """Health check endpoint
     ---
@@ -22,10 +22,10 @@ def up():
     redis.ping()
     es.ping()
 
-    return 'Healthy'
+    return "Healthy"
 
 
-@system_api.route("/api/install", methods=['GET'])
+@system_api.route("/api/install", methods=["GET"])
 def system_install():
     """API for performing the initial installation of the system.
     ---
@@ -38,15 +38,16 @@ def system_install():
     """
     try:
         from leaktopus.common.db_handler import get_db
+
         get_db()
     except Exception as e:
         print(e)
         abort(500)
 
-    return jsonify(results='success')
+    return jsonify(results="success")
 
 
-@system_api.route("/api/updatedb", methods=['GET'])
+@system_api.route("/api/updatedb", methods=["GET"])
 def run_updates():
     """Internal API for DB update (after version updates).
     ---
@@ -59,9 +60,10 @@ def run_updates():
     """
     try:
         from leaktopus.common.db_updates import apply_db_updates
+
         apply_db_updates(False)
     except Exception as e:
         print(e)
         abort(500)
 
-    return jsonify(results='success')
+    return jsonify(results="success")

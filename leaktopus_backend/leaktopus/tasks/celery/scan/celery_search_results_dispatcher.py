@@ -21,11 +21,12 @@ class CelerySearchResultsDispatcher(SearchResultsDispatcherInterface):
         )
 
         tasks = []
-        for page_num in range(initial_search_metadata["num_pages"]):
+        for current_page_number in range(initial_search_metadata["num_pages"]):
             tasks.append(
                 fetch_potential_leak_source_page_task_endpoint.s(
                     results=initial_search_metadata["results"],
-                    page_num=page_num,
+                    number_of_pages=initial_search_metadata["num_pages"],
+                    current_page_number=current_page_number,
                     potential_leak_source_request=potential_leak_source_request,
                 )
             )
