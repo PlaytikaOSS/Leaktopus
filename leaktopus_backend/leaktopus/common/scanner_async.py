@@ -398,6 +398,7 @@ def scan(
 ):
     from leaktopus.common.github_indexer import github_index_commits
     from leaktopus.common.leak_enhancer import leak_enhancer
+    from leaktopus.tasks.endpoints import trigger_pages_scan_task_endpoint
     import leaktopus.common.scans as scans
 
     # Do not run scan if one for the same search query is already running.
@@ -408,7 +409,23 @@ def scan(
     # Add the scan to DB.
     scan_id = scans.add_scan(search_query)
     if current_app.config["USE_EXPERIMENTAL_REFACTORING"]:
-        pass
+        logger.info("Using experimental refactoring")
+        chain = (
+            github_preprocessor.s(search_query=search_query, scan_id=scan_id)
+            | trigger_pages_scan_task_endpoint.s(
+                scan_id=scan_id, organization_domains=organization_domains
+            )
+            | gh_get_repos_full_names.s()
+            | leak_enhancer.s(
+                scan_id=scan_id,
+                organization_domains=organization_domains,
+                sensitive_keywords=sensitive_keywords,
+                enhancement_modules=enhancement_modules,
+            )
+            | github_index_commits.s(scan_id=scan_id)
+            | update_scan_status_async.s(scan_id=scan_id)
+        )
+        chain.apply_async(link_error=error_handler.s(scan_id=scan_id))
     else:
         chain = (
             github_preprocessor.s(search_query=search_query, scan_id=scan_id)
