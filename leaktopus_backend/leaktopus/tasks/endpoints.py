@@ -19,6 +19,7 @@ from leaktopus.services.potential_leak_source_scan_status.sqlite_potential_leak_
 from leaktopus.tasks.celery.scan.celery_search_results_dispatcher import (
     CelerySearchResultsDispatcher,
 )
+from leaktopus.tasks.github.scan.github_potential_leak_source_filter import GithubPotentialLeakSourceFilter
 from leaktopus.tasks.github.scan.github_potential_leak_source_page_results_fetcher import (
     GithubPotentialLeakSourcePageResultsFetcher,
 )
@@ -35,9 +36,8 @@ from leaktopus.usecases.scan.email_extractor import EmailExtractor
 from leaktopus.usecases.scan.fetch_potential_leak_source_page_use_case import (
     FetchPotentialLeakSourcePageUseCase,
 )
-from leaktopus.usecases.scan.save_potential_leak_source_page_use_case_test import (
+from leaktopus.usecases.scan.save_potential_leak_source_page_use_case import (
     SavePotentialLeakSourcePageUseCase,
-    GithubPotentialLeakSourceFilter,
 )
 from leaktopus.usecases.scan.trigger_pages_scan_use_case import (
     CollectPotentialLeakSourcePagesUseCase,

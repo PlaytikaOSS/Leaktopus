@@ -1,5 +1,10 @@
 import os
-from github import Github, RateLimitExceededException, BadCredentialsException, GithubException
+from github import (
+    Github,
+    RateLimitExceededException,
+    BadCredentialsException,
+    GithubException,
+)
 from datetime import datetime
 import re
 import json
@@ -19,7 +24,9 @@ MIN_DOMAINS_NUMBER = 150
 
 
 def datetime_to_timestamp(github_datetime):
-    last_modified_datetime = datetime.strptime(github_datetime, '%a, %d %b %Y %H:%M:%S %Z')
+    last_modified_datetime = datetime.strptime(
+        github_datetime, "%a, %d %b %Y %H:%M:%S %Z"
+    )
     return datetime.timestamp(last_modified_datetime)
 
 
@@ -37,45 +44,62 @@ def save_gh_leaks(code_results, search_query, organization_domains):
         org_emails = []
         # Try to extract organization emails.
         try:
-            org_emails = get_org_emails(res.decoded_content.decode(), organization_domains)
+            org_emails = get_org_emails(
+                res.decoded_content.decode(), organization_domains
+            )
         except AssertionError as e:
-            logger.error("Failed to extract org emails from the content file {} of {} - {}",
-                     res,
-                     res.repository.clone_url,
-                     e)
+            logger.error(
+                "Failed to extract org emails from the content file {} of {} - {}",
+                res,
+                res.repository.clone_url,
+                e,
+            )
             pass
 
         leak_data = {
             "file_name": res.name,
             "file_url": res.html_url,
-            "org_emails": org_emails
+            "org_emails": org_emails,
         }
 
         # Group by repos.
-        if any(d['url'] == clone_url for d in grouped_results):
-            existing_res_key = next((i for i, item in enumerate(grouped_results) if item["url"] == clone_url), None)
+        if any(d["url"] == clone_url for d in grouped_results):
+            existing_res_key = next(
+                (
+                    i
+                    for i, item in enumerate(grouped_results)
+                    if item["url"] == clone_url
+                ),
+                None,
+            )
             grouped_results[existing_res_key]["leaks"].append(leak_data)
         else:
-            grouped_results.append({
-                "url": clone_url,
-                "last_modified": datetime_to_timestamp(res.repository.last_modified),
-                "leaks": [leak_data],
-                "search_query": search_query,
-                "type": "github",
-                "context": {
-                    "repo_name": res.repository.name,
-                    "owner": res.repository.owner.login if res.repository.owner.login else False,
-                    # "organization": res.repository.organization if res.repository.organization else False,
-                    "repo_description": res.repository.description,
-                    "default_branch": res.repository.default_branch,
-                    "is_fork": res.repository.fork,
-                    "forks_count": res.repository.forks_count,
-                    "watchers_count": res.repository.watchers_count,
-                    "stargazers_count": res.repository.stargazers_count,
-                    # The commit sha it was found on.
-                    # "sha": res.sha
+            grouped_results.append(
+                {
+                    "url": clone_url,
+                    "last_modified": datetime_to_timestamp(
+                        res.repository.last_modified
+                    ),
+                    "leaks": [leak_data],
+                    "search_query": search_query,
+                    "type": "github",
+                    "context": {
+                        "repo_name": res.repository.name,
+                        "owner": res.repository.owner.login
+                        if res.repository.owner.login
+                        else False,
+                        # "organization": res.repository.organization if res.repository.organization else False,
+                        "repo_description": res.repository.description,
+                        "default_branch": res.repository.default_branch,
+                        "is_fork": res.repository.fork,
+                        "forks_count": res.repository.forks_count,
+                        "watchers_count": res.repository.watchers_count,
+                        "stargazers_count": res.repository.stargazers_count,
+                        # The commit sha it was found on.
+                        # "sha": res.sha
+                    },
                 }
-            })
+            )
 
     # Now, save all the (grouped) leaks to the DB.
     for leaks_repo in grouped_results:
@@ -92,7 +116,7 @@ def save_gh_leaks(code_results, search_query, organization_domains):
             json.dumps(leaks_repo["context"]),
             json.dumps(leaks_repo["leaks"]),
             False,
-            leaks_repo["last_modified"]
+            leaks_repo["last_modified"],
         )
 
     return grouped_results
@@ -100,14 +124,14 @@ def save_gh_leaks(code_results, search_query, organization_domains):
 
 def github_authenticate():
     # Authenticate to github
-    github_access_token = os.environ.get('GITHUB_ACCESS_TOKEN')
+    github_access_token = os.environ.get("GITHUB_ACCESS_TOKEN")
     if not github_access_token:
         logger.critical("Error: GitHub API key is missing.")
         return None
     try:
         g = Github(github_access_token)
     except BadCredentialsException:
-        logger.critical('Error:GitHub bad credentials.')
+        logger.critical("Error:GitHub bad credentials.")
         return None
     except RateLimitExceededException as e:
         raise
@@ -144,7 +168,7 @@ def github_get_num_of_pages(results):
         logger.error("Error with getting last page url - {}", e)
         return None
     if url:
-        num_of_pages = int(parse_qs(urlparse(url).query)['page'][0])
+        num_of_pages = int(parse_qs(urlparse(url).query)["page"][0])
     else:
         num_of_pages = 1
 
@@ -170,7 +194,9 @@ def github_preprocessor(self, search_query, scan_id):
             return None
 
     except RateLimitExceededException as e:
-        logger.warning('Rate limit exceeded when preprocessing github. Retry in 5 seconds')
+        logger.warning(
+            "Rate limit exceeded when preprocessing github. Retry in 5 seconds"
+        )
         raise self.retry(exc=e, countdown=5)
 
     answer = {"results": results, "num_pages": num_pages, "search_query": search_query}
@@ -191,6 +217,7 @@ def merge_pages(pages):
 
 @celery.task()
 def github_fetch_pages(struct, scan_id, organization_domains):
+    # trigger_pages_scan_task_endpoint starts
     # Executing tasks to get results per page
     from celery import group
     from celery.result import allow_join_result

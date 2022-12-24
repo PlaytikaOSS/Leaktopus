@@ -60,7 +60,7 @@ def create_app(settings_override=None, task_manager=None):
     # cache.init_app(app, config={'CACHE_TYPE': 'simple'})
     logger.debug("____create_app: {} ", settings_override)
 
-    app.config.from_object('config.settings')
+    app.config.from_object("config.settings")
     if settings_override:
         app.config.update(settings_override)
 

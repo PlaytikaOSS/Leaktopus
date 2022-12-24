@@ -3,6 +3,7 @@ import pytest
 from leaktopus.app import create_app
 from leaktopus.services.alert.alert_service import AlertService
 from leaktopus.services.alert.memory_provider import AlertMemoryProvider
+from leaktopus.services.ignore_pattern.ignore_pattern_provider_interface import IgnorePatternProviderInterface
 from leaktopus.services.leak.leak_service import LeakService
 from leaktopus.services.leak.memory_provider import LeakMemoryProvider
 from leaktopus.services.notification.memory_provider import NotificationMemoryProvider
@@ -13,6 +14,8 @@ from leaktopus.services.potential_leak_source_scan_status.potential_leak_source_
 
 from leaktopus.tasks.clients.memory_client import MemoryClient
 from leaktopus.tasks.task_manager import TaskManager
+from leaktopus.usecases.scan.domain_extractor import DomainExtractor
+from leaktopus.usecases.scan.email_extractor import EmailExtractor
 
 
 @pytest.fixture(name="app")
@@ -37,18 +40,14 @@ def runner(app):
 @pytest.fixture()
 def factory_leak_service():
     return lambda leaks=[], override_methods={}: LeakService(
-        LeakMemoryProvider(
-            leaks=leaks, override_methods=override_methods
-        )
+        LeakMemoryProvider(leaks=leaks, override_methods=override_methods)
     )
 
 
 @pytest.fixture()
 def factory_alert_service():
     return lambda alerts=[], override_methods={}: AlertService(
-        AlertMemoryProvider(
-            alerts=alerts, override_methods=override_methods
-        )
+        AlertMemoryProvider(alerts=alerts, override_methods=override_methods)
     )
 
 
@@ -73,3 +72,26 @@ def potential_leak_source_scan_status_provider_mock(mocker):
     return mocker.patch.object(
         PotentialLeakSourceScanStatusProviderInterface, "get_status"
     )
+
+@pytest.fixture
+def domain_extractor():
+    return DomainExtractor(
+        ltds=[
+            "com",
+            "net",
+        ]
+    )
+
+@pytest.fixture
+def email_extractor():
+    return EmailExtractor(
+        organization_domains=[
+            "example.com",
+            "example.net",
+        ]
+    )
+
+
+@pytest.fixture
+def ignore_pattern_provider_mock(mocker):
+    return mocker.patch.object(IgnorePatternProviderInterface, "get_ignore_patterns")
