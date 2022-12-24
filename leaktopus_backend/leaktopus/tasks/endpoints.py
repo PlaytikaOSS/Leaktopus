@@ -27,7 +27,7 @@ from leaktopus.tasks.send_alerts_notification_task import SendAlertsNotification
 from leaktopus.factory import (
     create_leak_service,
     create_notification_service,
-    create_alert_service,
+    create_alert_service, create_ignore_pattern_service, create_leaktopus_config_service,
 )
 from leaktopus.usecases.scan.could_not_fetch_exception import CouldNotFetchException
 from leaktopus.usecases.scan.domain_extractor import DomainExtractor
@@ -82,7 +82,7 @@ def trigger_pages_scan_task_endpoint(
     auto_retry_for=(CouldNotFetchException,),
 )
 def fetch_potential_leak_source_page_task_endpoint(
-    self, results, page_num, scan_id, search_query
+    self, results, page_num, scan_id, search_query, organization_domains
 ):
     client = create_celery_app()
     logger.debug("Fetching page {} for scan_id: {}", page_num, scan_id)
@@ -98,32 +98,29 @@ def fetch_potential_leak_source_page_task_endpoint(
         page_results=page_results,
         scan_id=scan_id,
         search_query=search_query,
+        organization_domains=organization_domains,
     ).apply_async()
 
 
 @shared_task
 def save_potential_leak_source_page_results_task_endpoint(
-    page_results, scan_id, search_query
+    page_results, scan_id, search_query,organization_domains
 ):
     logger.debug("Saving page results for scan_id: {}", scan_id)
     leak_service = create_leak_service()
-    ignore_pattern_service = IgnorePatternService(
-        provider=SqliteIgnorePatternProvider()
-    )
+    ignore_pattern_service = create_ignore_pattern_service()
     email_extractor = EmailExtractor(
-        organization_domains=["example.com", "example.org"]
+        organization_domains=organization_domains
     )
+    leaktopus_config_service = create_leaktopus_config_service()
     use_case = SavePotentialLeakSourcePageUseCase(
         leak_service=leak_service,
         potential_leak_source_filter=GithubPotentialLeakSourceFilter(
             leak_service=leak_service,
             ignore_pattern_service=ignore_pattern_service,
-            domain_extractor=DomainExtractor(ltds=["com", "org", "net", "io", "co"]),
+            domain_extractor=DomainExtractor(tlds=leaktopus_config_service.get_tlds()),
             email_extractor=email_extractor,
-            max_domain_emails=10,
-            max_non_org_emails=10,
-            max_fork_count=2,
-            max_star_count=1000,
+            leaktopus_config_service=leaktopus_config_service
         ),
         email_extractor=email_extractor,
     )

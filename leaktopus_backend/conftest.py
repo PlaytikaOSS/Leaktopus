@@ -76,7 +76,7 @@ def potential_leak_source_scan_status_provider_mock(mocker):
 @pytest.fixture
 def domain_extractor():
     return DomainExtractor(
-        ltds=[
+        tlds=[
             "com",
             "net",
         ]

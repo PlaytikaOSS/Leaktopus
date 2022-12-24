@@ -33,6 +33,19 @@ SERVICES = {
         "options": {
             "db": True,
         },
+    },
+    "ignore_pattern": {
+        "providers": ["sqlite"]
+    },
+    "leaktopus_config": {
+        "providers": ["initial_config"],
+        "defaults": {
+            "tlds": ["com", "net", "io", "info"],
+            "max_domain_emails": 150,
+            "max_non_org_emails": 5,
+            "max_fork_count": 2,
+            "max_star_count": 2,
+        }
     }
 }
 
