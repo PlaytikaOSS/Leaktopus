@@ -24,7 +24,6 @@ def create_celery_app(app=None):
     :param app: Flask app
     :return: Celery app
     """
-    logger.debug("____create_celery_app: {} ", app)
     app = app or create_app()
     celery = Celery(app.import_name)
 
@@ -58,9 +57,8 @@ def create_app(settings_override=None, task_manager=None):
     """
     app = Flask(__name__)
     # cache.init_app(app, config={'CACHE_TYPE': 'simple'})
-    logger.debug("____create_app: {} ", settings_override)
 
-    app.config.from_object('config.settings')
+    app.config.from_object("config.settings")
     if settings_override:
         app.config.update(settings_override)
 

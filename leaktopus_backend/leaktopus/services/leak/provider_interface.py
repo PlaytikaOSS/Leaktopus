@@ -9,7 +9,17 @@ class LeakProviderInterface(Protocol):
         pass
 
     @abstractmethod
-    def add_leak(self, url, search_query, leak_type, context, leaks, acknowledged, last_modified, **kwargs):
+    def add_leak(
+        self,
+        url,
+        search_query,
+        leak_type,
+        context,
+        leaks,
+        acknowledged,
+        last_modified,
+        **kwargs
+    ):
         pass
 
     def save_leaks(self, leaks):
