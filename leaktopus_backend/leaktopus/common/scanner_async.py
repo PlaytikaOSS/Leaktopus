@@ -1,4 +1,6 @@
 import os
+
+from flask import current_app
 from github import (
     Github,
     RateLimitExceededException,
@@ -383,25 +385,31 @@ def scan(search_query, organization_domains=[], sensitive_keywords=[], enhanceme
 
     # Add the scan to DB.
     scan_id = scans.add_scan(search_query)
-
-    chain = github_preprocessor.s(search_query=search_query, scan_id=scan_id) |\
-        github_fetch_pages.s(scan_id=scan_id, organization_domains=organization_domains) |\
-        gh_get_repos_full_names.s() |\
-        leak_enhancer.s(
-            scan_id=scan_id,
-            organization_domains=organization_domains,
-            sensitive_keywords=sensitive_keywords,
-            enhancement_modules=enhancement_modules
-        ) |\
-        github_index_commits.s(scan_id=scan_id) |\
-        update_scan_status_async.s(scan_id=scan_id)
-    chain.apply_async(link_error=error_handler.s(scan_id=scan_id))
+    if current_app.config["USE_EXPERIMENTAL_REFACTORING"]:
+        pass
+    else:
+        chain = (
+            github_preprocessor.s(search_query=search_query, scan_id=scan_id)
+            | github_fetch_pages.s(
+                scan_id=scan_id, organization_domains=organization_domains
+            )
+            | gh_get_repos_full_names.s()
+            | leak_enhancer.s(
+                scan_id=scan_id,
+                organization_domains=organization_domains,
+                sensitive_keywords=sensitive_keywords,
+                enhancement_modules=enhancement_modules,
+            )
+            | github_index_commits.s(scan_id=scan_id)
+            | update_scan_status_async.s(scan_id=scan_id)
+        )
+        chain.apply_async(link_error=error_handler.s(scan_id=scan_id))
 
     return scan_id
 
 
 def get_emails_from_content(content):
-    return re.findall(r'[\w\.-]+@[\w\.-]+\.\w+', content)
+    return re.findall(r"[\w\.-]+@[\w\.-]+\.\w+", content)
 
 
 def get_org_emails(content, organization_domains):
