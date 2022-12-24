@@ -1,6 +1,7 @@
 from leaktopus.services.potential_leak_source_scan_status.potential_leak_source_scan_status_service import (
     PotentialLeakSourceScanStatusService,
 )
+from leaktopus.tasks.potential_leak_source_request import PotentialLeakSourceRequest
 from leaktopus.usecases.scan.search_results_dispatcher_interface import (
     SearchResultsDispatcherInterface,
 )
@@ -17,11 +18,15 @@ class CollectPotentialLeakSourcePagesUseCase:
         )
         self.search_results_dispatcher = search_results_dispatcher
 
-    def execute(self, initial_search_metadata, scan_id, organization_domains):
+    def execute(
+        self,
+        initial_search_metadata,
+        potential_leak_source_request: PotentialLeakSourceRequest,
+    ):
         self.guard_initial_search_metadata(initial_search_metadata)
-        self.guard_scan_is_aborting(scan_id)
+        self.guard_scan_is_aborting(potential_leak_source_request.scan_id)
         self.search_results_dispatcher.dispatch(
-            initial_search_metadata, scan_id, organization_domains
+            initial_search_metadata, potential_leak_source_request
         )
 
     def guard_initial_search_metadata(self, initial_search_metadata):

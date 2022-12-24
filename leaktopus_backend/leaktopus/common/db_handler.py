@@ -42,7 +42,6 @@ def db_install(db):
     :param db:
     :return:
     """
-    logger.debug("DB installation started.")
 
     cursor = db.cursor()
     cursor.execute(

@@ -78,4 +78,4 @@ CELERY_CONFIG = {
     "task_store_eager_result": os.getenv("CELERY_ALWAYS_EAGER", False),
     "task_eager_propagates": os.getenv("CELERY_ALWAYS_EAGER", False),
 }
-USE_EXPERIMENTAL_REFACTORING = False
+USE_EXPERIMENTAL_REFACTORING = os.getenv("USE_EXPERIMENTAL_REFACTORING", False)
