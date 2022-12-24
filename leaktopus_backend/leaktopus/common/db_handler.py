@@ -365,6 +365,5 @@ def get_db_connection(database_file_path):
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, "_database", None)
-    logger.debug("Closing DB connection, {}".format(db))
     if db is not None:
         db.close()
