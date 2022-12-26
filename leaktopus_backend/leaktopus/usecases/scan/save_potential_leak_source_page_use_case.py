@@ -3,6 +3,9 @@ from typing import List
 
 from leaktopus.common.scanner_async import datetime_to_timestamp
 from leaktopus.services.leak.leak_service import LeakService
+from leaktopus.services.potential_leak_source_scan_status.potential_leak_source_scan_status_service import (
+    PotentialLeakSourceScanStatusService,
+)
 from leaktopus.usecases.scan.email_extractor import EmailExtractor
 from leaktopus.usecases.scan.potential_leak_source import PotentialLeakSource
 from leaktopus.usecases.scan.potential_leak_source_filter_interface import (
@@ -16,16 +19,30 @@ class SavePotentialLeakSourcePageUseCase:
         leak_service: LeakService,
         potential_leak_source_filter: PotentialLeakSourceFilterInterface,
         email_extractor: EmailExtractor,
+        potential_leak_source_scan_status_service: PotentialLeakSourceScanStatusService,
     ):
         self.leak_service = leak_service
         self.potential_leak_source_filter = potential_leak_source_filter
         self.email_extractor = email_extractor
+        self.potential_leak_source_scan_status_service = (
+            potential_leak_source_scan_status_service
+        )
 
-    def execute(self, scan_id, page_results: List[PotentialLeakSource], search_query):
+    def execute(
+        self,
+        scan_id,
+        page_results: List[PotentialLeakSource],
+        search_query,
+        current_page_number,
+    ):
         self.guard_empty_page_results(page_results)
         filtered_results = self.filter_results(scan_id, page_results)
         grouped_results = self.group_results_before_save(filtered_results, search_query)
         self.save_results(grouped_results, search_query)
+        self.potential_leak_source_scan_status_service.mark_as_analyzing(
+            scan_id, current_page_number
+        )
+        return grouped_results
 
     def group_results_before_save(self, filtered_results, search_query):
         grouped_results = []
@@ -35,7 +52,7 @@ class SavePotentialLeakSourcePageUseCase:
             )
             leak_data = self.generate_leak_data(result, org_emails)
             is_url_exists = self.is_url_exists(grouped_results, result)
-            self.append_or_update_group_result(
+            grouped_results = self.append_or_update_group_result(
                 grouped_results, is_url_exists, leak_data, search_query, result
             )
         return grouped_results
@@ -67,7 +84,12 @@ class SavePotentialLeakSourcePageUseCase:
         return is_url_exists
 
     def append_or_update_group_result(
-        self, grouped_results, is_url_exists, leak_data, search_query, potential_leak_source
+        self,
+        grouped_results,
+        is_url_exists,
+        leak_data,
+        search_query,
+        potential_leak_source,
     ):
         if is_url_exists:
             existing_res_key = None
@@ -82,6 +104,7 @@ class SavePotentialLeakSourcePageUseCase:
                     grouped_results, potential_leak_source, search_query, leak_data
                 )
             )
+        return grouped_results
 
     def generate_result(self, grouped_results, search_result, search_query, leak_data):
         return {

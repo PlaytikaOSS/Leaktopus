@@ -11,5 +11,19 @@ class PotentialLeakSourceScanStatusService:
         self.provider = provider
 
     def is_aborting(self, scan_id: int) -> bool:
-        logger.debug("Checking if scan is aborting")
         return self.provider.get_status(scan_id) == ScanStatus.SCAN_ABORTING
+
+    def set_status(self, scan_id: int, status: ScanStatus):
+        self.provider.set_status(scan_id, status)
+
+    def get_status(self, scan_id: int) -> ScanStatus:
+        return self.provider.get_status(scan_id)
+
+    def mark_as_started(self, scan_id: int, page_number: int):
+        self.provider.mark_as_started(scan_id, page_number)
+
+    def mark_as_analyzing(self, scan_id: int, page_number: int):
+        self.provider.mark_as_analyzing(scan_id, page_number)
+
+    def get_analyzing_count(self, scan_id: int) -> int:
+        return self.provider.get_analyzing_count(scan_id)

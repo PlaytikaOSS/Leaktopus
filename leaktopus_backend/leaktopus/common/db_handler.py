@@ -42,7 +42,6 @@ def db_install(db):
     :param db:
     :return:
     """
-    logger.debug("DB installation started.")
 
     cursor = db.cursor()
     cursor.execute(
@@ -97,6 +96,17 @@ def db_install(db):
                     leak_id INTEGER,
                     type TEXT
                 )"""
+    )
+    cursor.execute(
+        """
+            CREATE TABLE IF NOT exists scan_status (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                scan_id INTEGER,
+                page_number INTEGER,
+                status TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+        """
     )
     db.commit()
 
@@ -345,7 +355,6 @@ def delete_config_github_ignored(pid):
 
 def get_db(force_install=False):
     db = getattr(g, "_database", None)
-
     if db is None:
         g._database = db = get_db_connection(current_app.config["DATABASE_PATH"])
 

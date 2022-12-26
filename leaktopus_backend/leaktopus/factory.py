@@ -23,6 +23,12 @@ from leaktopus.services.notification.ms_teams_provider import (
 )
 from leaktopus.services.notification.notification_service import NotificationService
 from leaktopus.services.notification.slack_provider import NotificationSlackProvider
+from leaktopus.services.potential_leak_source_scan_status.potential_leak_source_scan_status_service import (
+    PotentialLeakSourceScanStatusService,
+)
+from leaktopus.services.potential_leak_source_scan_status.sqlite_potential_leak_source_scan_status_provider import (
+    SqlitePotentialLeakSourceScanStatusProvider,
+)
 from leaktopus.utils.common_imports import logger
 
 
@@ -122,5 +128,23 @@ def create_leaktopus_config_service():
         current_app.config["SERVICES"]["leaktopus_config"]["providers"],
     )
     return LeaktopusConfigService(
+        provider=provider,
+    )
+
+
+def create_potential_leak_source_scan_status_service():
+    supported_providers = {
+        "sqlite": [
+            SqlitePotentialLeakSourceScanStatusProvider,
+            {"db": get_db()},
+        ],
+    }
+    provider = create_provider(
+        supported_providers,
+        current_app.config["SERVICES"]["potential_leak_source_scan_status"][
+            "providers"
+        ],
+    )
+    return PotentialLeakSourceScanStatusService(
         provider=provider,
     )

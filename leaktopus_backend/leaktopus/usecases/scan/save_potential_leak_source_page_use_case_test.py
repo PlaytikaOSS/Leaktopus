@@ -5,6 +5,12 @@ from leaktopus.services.ignore_pattern.ignore_pattern_provider_interface import 
 )
 from leaktopus.services.leak.leak_service import LeakService
 from leaktopus.services.leak.provider_interface import LeakProviderInterface
+from leaktopus.services.potential_leak_source_scan_status.potential_leak_source_scan_status_provider_interface import (
+    PotentialLeakSourceScanStatusProviderInterface,
+)
+from leaktopus.services.potential_leak_source_scan_status.potential_leak_source_scan_status_service import (
+    PotentialLeakSourceScanStatusService,
+)
 from leaktopus.usecases.scan.email_extractor import EmailExtractor
 from leaktopus.usecases.scan.potential_leak_source import PotentialLeakSource
 from leaktopus.usecases.scan.potential_leak_source_filter_interface import (
@@ -20,22 +26,37 @@ def test_should_save_potential_leak_source_page_successfully(
     ignore_pattern_provider_mock,
     potential_leak_source_filter_mock,
     page_results,
+    potential_leak_source_scan_status_provider_mock,
 ):
     search_query = "test"
     scan_id = 1
+    current_page_number = 1
 
     leak_provider_mock.add_leak.return_value = None
     ignore_pattern_provider_mock.get_ignore_patterns.return_value = []
     potential_leak_source_filter_mock.filter.return_value = True
+    potential_leak_source_scan_status_provider_mock.mark_as_analyzing.return_value = (
+        None
+    )
 
     leak_service = LeakService(leak_provider=leak_provider_mock)
     use_case = SavePotentialLeakSourcePageUseCase(
         leak_service=leak_service,
         potential_leak_source_filter=potential_leak_source_filter_mock,
         email_extractor=EmailExtractor(organization_domains=["test.com", "test2.com"]),
+        potential_leak_source_scan_status_service=PotentialLeakSourceScanStatusService(
+            provider=potential_leak_source_scan_status_provider_mock
+        ),
     )
-    use_case.execute(scan_id, page_results, search_query)
+    use_case.execute(scan_id, page_results, search_query, current_page_number)
     leak_provider_mock.add_leak.assert_called()
+
+
+@pytest.fixture
+def potential_leak_source_scan_status_provider_mock(mocker):
+    return mocker.patch.object(
+        PotentialLeakSourceScanStatusProviderInterface, "mark_as_analyzing"
+    )
 
 
 @pytest.fixture

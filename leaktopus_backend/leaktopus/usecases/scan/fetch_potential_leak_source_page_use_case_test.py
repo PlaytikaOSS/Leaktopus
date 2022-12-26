@@ -18,7 +18,7 @@ def test_should_fetch_potential_leak_source_page_successfully(
     potential_leak_source_page_results_fetcher_mock,
 ):
     results = [1, 2, 3]
-    page_num = 2
+    page_number = 2
     scan_id = 1
     fetcher_results = [4, 5, 6]
 
@@ -33,7 +33,7 @@ def test_should_fetch_potential_leak_source_page_successfully(
         ),
         potential_leak_source_page_results_fetcher=potential_leak_source_page_results_fetcher_mock,
     )
-    page_results = use_case.execute(results, page_num, scan_id)
+    page_results = use_case.execute(results, page_number, scan_id)
     assert page_results == fetcher_results
 
 

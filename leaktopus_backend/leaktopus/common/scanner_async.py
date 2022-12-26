@@ -15,6 +15,8 @@ from leaktopus.app import create_celery_app
 from leaktopus.exceptions.scans import ScanHasNoResults
 from loguru import logger
 
+from leaktopus.tasks.potential_leak_source_request import PotentialLeakSourceRequest
+
 celery = create_celery_app()
 
 # Filters definitions
@@ -410,21 +412,16 @@ def scan(
     scan_id = scans.add_scan(search_query)
     if current_app.config["USE_EXPERIMENTAL_REFACTORING"]:
         logger.info("Using experimental refactoring")
-        chain = (
-            github_preprocessor.s(search_query=search_query, scan_id=scan_id)
-            | trigger_pages_scan_task_endpoint.s(
-                scan_id=scan_id, organization_domains=organization_domains
-            )
-            | gh_get_repos_full_names.s()
-            | leak_enhancer.s(
-                scan_id=scan_id,
-                organization_domains=organization_domains,
-                sensitive_keywords=sensitive_keywords,
-                enhancement_modules=enhancement_modules,
-            )
-            | github_index_commits.s(scan_id=scan_id)
-            | update_scan_status_async.s(scan_id=scan_id)
+        potential_leak_source_request = PotentialLeakSourceRequest(
+            scan_id=scan_id,
+            search_query=search_query,
+            organization_domains=organization_domains,
+            sensitive_keywords=sensitive_keywords,
+            enhancement_modules=enhancement_modules,
         )
+        chain = github_preprocessor.s(
+            search_query=search_query, scan_id=scan_id
+        ) | trigger_pages_scan_task_endpoint.s(potential_leak_source_request)
         chain.apply_async(link_error=error_handler.s(scan_id=scan_id))
     else:
         chain = (
