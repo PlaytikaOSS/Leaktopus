@@ -29,6 +29,17 @@ from leaktopus.services.potential_leak_source_scan_status.potential_leak_source_
 from leaktopus.services.potential_leak_source_scan_status.sqlite_potential_leak_source_scan_status_provider import (
     SqlitePotentialLeakSourceScanStatusProvider,
 )
+from leaktopus.tasks.celery.scan.celery_search_results_dispatcher import (
+    CelerySearchResultsDispatcher,
+)
+from leaktopus.tasks.github.scan.github_potential_leak_source_filter import (
+    GithubPotentialLeakSourceFilter,
+)
+from leaktopus.tasks.github.scan.github_potential_leak_source_page_results_fetcher import (
+    GithubPotentialLeakSourcePageResultsFetcher,
+)
+from leaktopus.usecases.scan.domain_extractor import DomainExtractor
+from leaktopus.usecases.scan.email_extractor import EmailExtractor
 from leaktopus.utils.common_imports import logger
 
 
@@ -148,3 +159,35 @@ def create_potential_leak_source_scan_status_service():
     return PotentialLeakSourceScanStatusService(
         provider=provider,
     )
+
+
+def create_potential_leak_source_page_results_fetcher(
+    provider_type,
+):
+    if provider_type == "github":
+        return GithubPotentialLeakSourcePageResultsFetcher()
+
+
+def create_search_results_dispatcher(dispatcher_type):
+    if dispatcher_type == "celery":
+        from leaktopus.app import create_celery_app
+
+        client = create_celery_app()
+        return CelerySearchResultsDispatcher(client=client)
+
+
+def create_potential_leak_source_filter(
+    provider_type: str,
+    leak_service: LeakService,
+    leaktopus_config_service: LeaktopusConfigService,
+    email_extractor: EmailExtractor,
+):
+    if provider_type == "github":
+        ignore_pattern_service = create_ignore_pattern_service()
+        return GithubPotentialLeakSourceFilter(
+            leak_service=leak_service,
+            ignore_pattern_service=ignore_pattern_service,
+            domain_extractor=DomainExtractor(tlds=leaktopus_config_service.get_tlds()),
+            email_extractor=email_extractor,
+            leaktopus_config_service=leaktopus_config_service,
+        )

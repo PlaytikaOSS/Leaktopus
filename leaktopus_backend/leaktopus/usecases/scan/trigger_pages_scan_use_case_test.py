@@ -41,6 +41,7 @@ def test_should_trigger_pages_scan_successfully(
         organization_domains=organization_domains,
         enhancement_modules=[],
         sensitive_keywords=[],
+        provider_type="github",
     )
     search_results_dispatcher_mock.return_value = None
     potential_leak_source_scan_status_provider_mock.get_status.return_value = (
@@ -111,6 +112,7 @@ def test_should_trigger_pages_scan_and_fail_when_scan_is_aborting(
         organization_domains=organization_domains,
         enhancement_modules=[],
         sensitive_keywords=[],
+        provider_type="github",
     )
 
     search_results_dispatcher_mock.return_value = None

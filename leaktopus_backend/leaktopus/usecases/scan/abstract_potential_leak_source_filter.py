@@ -9,7 +9,9 @@ from leaktopus.services.ignore_pattern.ignore_pattern_service import (
 )
 from leaktopus.services.leak.leak import Leak
 from leaktopus.services.leak.leak_service import LeakService
-from leaktopus.services.leaktopus_config.leaktopus_config_service import LeaktopusConfigService
+from leaktopus.services.leaktopus_config.leaktopus_config_service import (
+    LeaktopusConfigService,
+)
 from leaktopus.usecases.scan.domain_extractor import DomainExtractor
 from leaktopus.usecases.scan.email_extractor import EmailExtractor
 from leaktopus.usecases.scan.potential_leak_source import PotentialLeakSource
@@ -84,7 +86,6 @@ class AbstractPotentialLeakSourceFilter(PotentialLeakSourceFilterInterface):
         last_modified = potential_leak_source.last_modified
         return last_modified > known_last_modified
 
-
     @abstractmethod
     def extract_star_count(self, potential_leak_source):
         raise NotImplementedError
@@ -94,10 +95,16 @@ class AbstractPotentialLeakSourceFilter(PotentialLeakSourceFilterInterface):
         raise NotImplementedError
 
     def fork_count_is_too_high(self, potential_leak_source):
-        return self.extract_fork_count(potential_leak_source) >= self.leaktopus_config_service.get_max_fork_count()
+        return (
+            self.extract_fork_count(potential_leak_source)
+            >= self.leaktopus_config_service.get_max_fork_count()
+        )
 
     def star_count_is_too_high(self, potential_leak_source):
-        return self.extract_star_count(potential_leak_source) >= self.leaktopus_config_service.get_max_star_count()
+        return (
+            self.extract_star_count(potential_leak_source)
+            >= self.leaktopus_config_service.get_max_star_count()
+        )
 
     def too_many_non_org_emails(self, content):
         emails = self.email_extractor.extract_non_organization_emails(content)

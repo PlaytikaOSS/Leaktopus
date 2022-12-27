@@ -1,5 +1,6 @@
 import os
 
+from celery import shared_task
 from flask import current_app
 from github import (
     Github,
@@ -11,13 +12,11 @@ from datetime import datetime
 import re
 import json
 import leaktopus.common.db_handler as dbh
-from leaktopus.app import create_celery_app
 from leaktopus.exceptions.scans import ScanHasNoResults
 from loguru import logger
 
 from leaktopus.tasks.potential_leak_source_request import PotentialLeakSourceRequest
 
-celery = create_celery_app()
 
 # Filters definitions
 # @todo Migrate to a configuration table.
@@ -179,7 +178,7 @@ def github_get_num_of_pages(results):
     return num_of_pages
 
 
-@celery.task(bind=True, max_retries=200)
+@shared_task(bind=True, max_retries=200)
 def github_preprocessor(self, search_query, scan_id):
     from leaktopus.exceptions.scans import ScanHasNoResults
 
@@ -219,7 +218,7 @@ def merge_pages(pages):
     return results
 
 
-@celery.task()
+@shared_task()
 def github_fetch_pages(struct, scan_id, organization_domains):
     # trigger_pages_scan_task_endpoint starts
     # Executing tasks to get results per page
@@ -303,7 +302,7 @@ def show_partial_results(result_group, search_query, organization_domains):
     return grouped_results
 
 
-@celery.task(bind=True, max_retries=200)
+@shared_task(bind=True, max_retries=200)
 def github_get_page(self, results, page_num, scan_id):
     # Skip step if abort was requested.
     import leaktopus.common.scans as scans
@@ -346,7 +345,7 @@ def github_get_page(self, results, page_num, scan_id):
     return cur_page
 
 
-@celery.task()
+@shared_task()
 def gh_get_repos_full_names(gh_results_struct):
     repo_full_names = []
 
@@ -362,7 +361,7 @@ def gh_get_repos_full_names(gh_results_struct):
     return repo_full_names
 
 
-@celery.task
+@shared_task
 def update_scan_status_async(repos_full_names, scan_id):
     import leaktopus.common.scans as scans
     from leaktopus.models.scan_status import ScanStatus
@@ -379,7 +378,7 @@ def update_scan_status_async(repos_full_names, scan_id):
         scans.update_scan_status(scan_id, ScanStatus.SCAN_FAILED)
 
 
-@celery.task
+@shared_task
 def error_handler(request, exc, traceback, scan_id):
     from leaktopus.exceptions.scans import ScanHasNoResults
 
@@ -418,6 +417,7 @@ def scan(
             organization_domains=organization_domains,
             sensitive_keywords=sensitive_keywords,
             enhancement_modules=enhancement_modules,
+            provider_type="github",
         )
         chain = github_preprocessor.s(
             search_query=search_query, scan_id=scan_id

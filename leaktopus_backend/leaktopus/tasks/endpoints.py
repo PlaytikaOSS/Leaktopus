@@ -4,22 +4,12 @@ from celery import shared_task
 
 from leaktopus.app import create_celery_app
 from leaktopus.services.notification.notification_service import NotificationException
-from leaktopus.services.potential_leak_source_scan_status.potential_leak_source_scan_status_service import (
-    PotentialLeakSourceScanStatusService,
-)
-
-from leaktopus.services.potential_leak_source_scan_status.sqlite_potential_leak_source_scan_status_provider import (
-    SqlitePotentialLeakSourceScanStatusProvider,
-)
 
 from leaktopus.tasks.celery.scan.celery_search_results_dispatcher import (
     CelerySearchResultsDispatcher,
 )
 from leaktopus.tasks.github.scan.github_potential_leak_source_filter import (
     GithubPotentialLeakSourceFilter,
-)
-from leaktopus.tasks.github.scan.github_potential_leak_source_page_results_fetcher import (
-    GithubPotentialLeakSourcePageResultsFetcher,
 )
 from leaktopus.tasks.potential_leak_source_request import PotentialLeakSourceRequest
 from leaktopus.tasks.send_alerts_notification_task import SendAlertsNotificationTask
@@ -30,6 +20,9 @@ from leaktopus.factory import (
     create_ignore_pattern_service,
     create_leaktopus_config_service,
     create_potential_leak_source_scan_status_service,
+    create_potential_leak_source_page_results_fetcher,
+    create_potential_leak_source_filter,
+    create_search_results_dispatcher,
 )
 from leaktopus.usecases.scan.could_not_fetch_exception import CouldNotFetchException
 from leaktopus.usecases.scan.domain_extractor import DomainExtractor
@@ -40,6 +33,9 @@ from leaktopus.usecases.scan.fetch_potential_leak_source_page_use_case import (
 )
 from leaktopus.usecases.scan.save_potential_leak_source_page_use_case import (
     SavePotentialLeakSourcePageUseCase,
+)
+from leaktopus.usecases.scan.search_results_dispatcher_interface import (
+    SearchResultsDispatcherInterface,
 )
 from leaktopus.usecases.scan.trigger_pages_scan_use_case import (
     CollectPotentialLeakSourcePagesUseCase,
@@ -65,18 +61,20 @@ def send_alerts_notification_task_endpoint():
 
 @shared_task
 def trigger_pages_scan_task_endpoint(
-    initial_search_metadata, potential_leak_source_request: PotentialLeakSourceRequest
+    initial_search_metadata,
+    potential_leak_source_request: PotentialLeakSourceRequest,
+    dispatcher_type: str,
 ):
-    client = create_celery_app()
     logger.debug(
         "Triggering pages scan for scan_id: {}", potential_leak_source_request.scan_id
     )
+    search_results_dispatcher = create_search_results_dispatcher(dispatcher_type)
     potential_leak_source_scan_status_service = (
         create_potential_leak_source_scan_status_service()
     )
     use_case = CollectPotentialLeakSourcePagesUseCase(
         potential_leak_source_scan_status_service=potential_leak_source_scan_status_service,
-        search_results_dispatcher=CelerySearchResultsDispatcher(client=client),
+        search_results_dispatcher=search_results_dispatcher,
     )
     use_case.execute(initial_search_metadata, potential_leak_source_request)
 
@@ -93,7 +91,6 @@ def fetch_potential_leak_source_page_task_endpoint(
     number_of_pages,
     potential_leak_source_request: PotentialLeakSourceRequest,
 ):
-    client = create_celery_app()
     logger.debug(
         "Fetching page {} for scan_id: {}",
         current_page_number,
@@ -102,9 +99,15 @@ def fetch_potential_leak_source_page_task_endpoint(
     potential_leak_source_scan_status_service = (
         create_potential_leak_source_scan_status_service()
     )
+
+    potential_leak_source_page_results_fetcher = (
+        create_potential_leak_source_page_results_fetcher(
+            potential_leak_source_request.provider_type
+        )
+    )
     use_case = FetchPotentialLeakSourcePageUseCase(
         potential_leak_source_scan_status_service=potential_leak_source_scan_status_service,
-        potential_leak_source_page_results_fetcher=GithubPotentialLeakSourcePageResultsFetcher(),
+        potential_leak_source_page_results_fetcher=potential_leak_source_page_results_fetcher,
     )
     page_results = use_case.execute(
         results, current_page_number, potential_leak_source_request.scan_id
@@ -128,7 +131,6 @@ def save_potential_leak_source_page_results_task_endpoint(
         "Saving page results for scan_id: {}", potential_leak_source_request.scan_id
     )
     leak_service = create_leak_service()
-    ignore_pattern_service = create_ignore_pattern_service()
     email_extractor = EmailExtractor(
         organization_domains=potential_leak_source_request.organization_domains
     )
@@ -136,15 +138,15 @@ def save_potential_leak_source_page_results_task_endpoint(
     potential_leak_source_scan_status_service = (
         create_potential_leak_source_scan_status_service()
     )
+    potential_leak_source_filter = create_potential_leak_source_filter(
+        potential_leak_source_request.provider_type,
+        leak_service=leak_service,
+        email_extractor=email_extractor,
+        leaktopus_config_service=leaktopus_config_service,
+    )
     use_case = SavePotentialLeakSourcePageUseCase(
         leak_service=leak_service,
-        potential_leak_source_filter=GithubPotentialLeakSourceFilter(
-            leak_service=leak_service,
-            ignore_pattern_service=ignore_pattern_service,
-            domain_extractor=DomainExtractor(tlds=leaktopus_config_service.get_tlds()),
-            email_extractor=email_extractor,
-            leaktopus_config_service=leaktopus_config_service,
-        ),
+        potential_leak_source_filter=potential_leak_source_filter,
         email_extractor=email_extractor,
         potential_leak_source_scan_status_service=potential_leak_source_scan_status_service,
     )

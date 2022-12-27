@@ -6,6 +6,7 @@ from leaktopus.common.scanner_async import github_get_num_of_pages
 from leaktopus.tasks.endpoints import (
     trigger_pages_scan_task_endpoint,
 )
+from leaktopus.tasks.potential_leak_source_request import PotentialLeakSourceRequest
 
 
 def main():
@@ -25,9 +26,16 @@ def main():
         "leaktopus.io",
     ]
     results = []
-
+    potential_leak_source_request = PotentialLeakSourceRequest(
+        scan_id=scan_id,
+        search_query=search_query,
+        organization_domains=organization_domains,
+        enhancement_modules=[],
+        sensitive_keywords=[],
+        provider_type="github",
+    )
     task = trigger_pages_scan_task_endpoint.s(
-        initial_search_metadata, scan_id, organization_domains
+        initial_search_metadata, potential_leak_source_request, "celery"
     )
     result = task.delay()
     result.wait()

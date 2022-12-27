@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, abort, current_app
 from loguru import logger
 
-scans_api = Blueprint('scans_api', __name__)
+scans_api = Blueprint("scans_api", __name__)
 
 
 @scans_api.errorhandler(500)
@@ -10,7 +10,7 @@ def custom500(error):
     return jsonify(results={"success": False, "message": error.description})
 
 
-@scans_api.route("/api/scan", methods=['GET'])
+@scans_api.route("/api/scan", methods=["GET"])
 def start_scan():
     """API For scanning for leaks (async).
     ---
@@ -29,17 +29,19 @@ def start_scan():
       500:
         description: Generic error.
     """
-    q = request.args.get('q')
+    q = request.args.get("q")
     if not q:
         abort(422)
 
     # Scan (in an async way with Celery)
     import leaktopus.common.scanner_async as scanner
+
     scan_id = scanner.scan(q)
 
     # Get the new scan's information.
     try:
         import leaktopus.common.scans as scans
+
         scan = scans.get_scans(scan_id=scan_id)
     except Exception as e:
         abort(500)
@@ -57,7 +59,7 @@ def is_valid_sensitive_keywords(sensitive_keywords):
     return True
 
 
-@scans_api.route("/api/scan", methods=['POST'])
+@scans_api.route("/api/scan", methods=["POST"])
 def start_scan_extended():
     """API For scanning for leaks (async).
     ---
@@ -126,7 +128,12 @@ def start_scan_extended():
     sensitive_keywords = []
     if "sensitive_keywords" in content:
         if not is_valid_sensitive_keywords(content["sensitive_keywords"]):
-            return jsonify(results={"success": False, "error": "blacklisted characters in sensitive_keywords"})
+            return jsonify(
+                results={
+                    "success": False,
+                    "error": "blacklisted characters in sensitive_keywords",
+                }
+            )
 
         sensitive_keywords = content["sensitive_keywords"]
 
@@ -135,15 +142,20 @@ def start_scan_extended():
     else:
         # Use the default enhancement modules if the parameter is not sent.
         from leaktopus.common.leak_enhancer import get_enhancement_modules
+
         enhancement_modules = get_enhancement_modules()
 
     # Scan (in an async way with Celery)
     import leaktopus.common.scanner_async as scanner
-    scan_id = scanner.scan(content["q"], org_domains, sensitive_keywords, enhancement_modules)
+
+    scan_id = scanner.scan(
+        content["q"], org_domains, sensitive_keywords, enhancement_modules
+    )
 
     # Get the new scan's information.
     try:
         import leaktopus.common.scans as scans
+
         scan = scans.get_scans(scan_id=scan_id)
     except Exception as e:
         abort(500)
@@ -151,7 +163,7 @@ def start_scan_extended():
     return jsonify(results=scan)
 
 
-@scans_api.route("/api/scans", methods=['GET'])
+@scans_api.route("/api/scans", methods=["GET"])
 def get_scans():
     """API For getting all scans.
     ---
@@ -162,6 +174,7 @@ def get_scans():
     scans = None
     try:
         import leaktopus.common.scans as scans
+
         # @todo Add limits and pagination.
         scans = scans.get_scans()
 
@@ -171,7 +184,7 @@ def get_scans():
     return jsonify(results=scans)
 
 
-@scans_api.route("/api/scan/<int:id>", methods=['GET'])
+@scans_api.route("/api/scan/<int:id>", methods=["GET"])
 def get_scan_status(id):
     """API For getting a scan.
     ---
@@ -187,6 +200,7 @@ def get_scan_status(id):
     scan = None
     try:
         import leaktopus.common.scans as scans
+
         scan = scans.get_scans(scan_id=int(id))
 
     except Exception as e:
@@ -195,7 +209,7 @@ def get_scan_status(id):
     return jsonify(results=scan)
 
 
-@scans_api.route("/api/scan/<int:id>/abort", methods=['GET'])
+@scans_api.route("/api/scan/<int:id>/abort", methods=["GET"])
 def abort_scan(id):
     """API For aborting a scan.
     ---
@@ -227,7 +241,7 @@ def abort_scan(id):
     return jsonify(results=scan)
 
 
-@scans_api.route("/api/scan/<int:id>/kill", methods=['GET'])
+@scans_api.route("/api/scan/<int:id>/kill", methods=["GET"])
 def kill_scan(id):
     """API For killing a scan (UNGRACEFULLY), should only be used on rare cases.
     ---
@@ -257,7 +271,7 @@ def kill_scan(id):
     return jsonify(results=scan)
 
 
-@scans_api.route("/api/repo/enhance", methods=['POST'])
+@scans_api.route("/api/repo/enhance", methods=["POST"])
 def enhance_repo():
     """API For enhancing a repository known to Leaktopus (async).
     ---
@@ -327,7 +341,12 @@ def enhance_repo():
     sensitive_keywords = []
     if "sensitive_keywords" in content:
         if not is_valid_sensitive_keywords(content["sensitive_keywords"]):
-            return jsonify(results={"success": False, "error": "blacklisted characters in sensitive_keywords"})
+            return jsonify(
+                results={
+                    "success": False,
+                    "error": "blacklisted characters in sensitive_keywords",
+                }
+            )
 
         sensitive_keywords = content["sensitive_keywords"]
 
@@ -336,16 +355,18 @@ def enhance_repo():
     else:
         # Use the default enhancement modules if the parameter is not sent.
         from leaktopus.common.leak_enhancer import get_enhancement_modules
+
         enhancement_modules = get_enhancement_modules()
 
     # Scan (in an async way with Celery)
     from leaktopus.common.leak_enhancer import enhance_repo
+
     task = enhance_repo.s(
-                content["repo_name"],
-                organization_domains=org_domains,
-                sensitive_keywords=sensitive_keywords,
-                enhancement_modules=enhancement_modules
-            )
+        content["repo_name"],
+        organization_domains=org_domains,
+        sensitive_keywords=sensitive_keywords,
+        enhancement_modules=enhancement_modules,
+    )
     task.apply_async()
 
     return jsonify(results={"success": True})

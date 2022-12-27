@@ -8,3 +8,4 @@ class PotentialLeakSourceRequest:
     organization_domains: list
     sensitive_keywords: list
     enhancement_modules: list
+    provider_type: str
