@@ -15,7 +15,9 @@ import leaktopus.common.db_handler as dbh
 from leaktopus.exceptions.scans import ScanHasNoResults
 from loguru import logger
 
-from leaktopus.tasks.potential_leak_source_request import PotentialLeakSourceRequest
+from leaktopus.details.scan.potential_leak_source_request import (
+    PotentialLeakSourceRequest,
+)
 
 
 # Filters definitions
@@ -220,7 +222,7 @@ def merge_pages(pages):
 
 @shared_task()
 def github_fetch_pages(struct, scan_id, organization_domains):
-    # trigger_pages_scan_task_endpoint starts
+    # trigger_pages_scan_task_entrypoint starts
     # Executing tasks to get results per page
     from celery import group
     from celery.result import allow_join_result
@@ -231,7 +233,6 @@ def github_fetch_pages(struct, scan_id, organization_domains):
 
     # Skip step if abort was requested.
     import leaktopus.common.scans as scans
-    from leaktopus.models.scan_status import ScanStatus
 
     if scans.is_scan_aborting(scan_id):
         return []
@@ -306,7 +307,6 @@ def show_partial_results(result_group, search_query, organization_domains):
 def github_get_page(self, results, page_num, scan_id):
     # Skip step if abort was requested.
     import leaktopus.common.scans as scans
-    from leaktopus.models.scan_status import ScanStatus
 
     if scans.is_scan_aborting(scan_id):
         return None
@@ -399,7 +399,9 @@ def scan(
 ):
     from leaktopus.common.github_indexer import github_index_commits
     from leaktopus.common.leak_enhancer import leak_enhancer
-    from leaktopus.tasks.endpoints import trigger_pages_scan_task_endpoint
+    from leaktopus.details.entrypoints.alerts.task import (
+        trigger_pages_scan_task_entrypoint,
+    )
     import leaktopus.common.scans as scans
 
     # Do not run scan if one for the same search query is already running.
@@ -421,7 +423,7 @@ def scan(
         )
         chain = github_preprocessor.s(
             search_query=search_query, scan_id=scan_id
-        ) | trigger_pages_scan_task_endpoint.s(potential_leak_source_request)
+        ) | trigger_pages_scan_task_entrypoint.s(potential_leak_source_request)
         chain.apply_async(link_error=error_handler.s(scan_id=scan_id))
     else:
         chain = (

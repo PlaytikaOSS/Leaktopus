@@ -3,19 +3,21 @@ import pytest
 from leaktopus.app import create_app
 from leaktopus.services.alert.alert_service import AlertService
 from leaktopus.services.alert.memory_provider import AlertMemoryProvider
-from leaktopus.services.ignore_pattern.ignore_pattern_provider_interface import IgnorePatternProviderInterface
+from leaktopus.services.ignore_pattern.ignore_pattern_provider_interface import (
+    IgnorePatternProviderInterface,
+)
 from leaktopus.services.leak.leak_service import LeakService
 from leaktopus.services.leak.memory_provider import LeakMemoryProvider
 from leaktopus.services.notification.memory_provider import NotificationMemoryProvider
 from leaktopus.services.notification.notification_service import NotificationService
-from leaktopus.services.potential_leak_source_scan_status.potential_leak_source_scan_status_provider_interface import (
+from leaktopus.services.potential_leak_source_scan_status.interface import (
     PotentialLeakSourceScanStatusProviderInterface,
 )
 
 from leaktopus.tasks.clients.memory_client import MemoryClient
 from leaktopus.tasks.task_manager import TaskManager
-from leaktopus.usecases.scan.domain_extractor import DomainExtractor
-from leaktopus.usecases.scan.email_extractor import EmailExtractor
+from leaktopus.domain.extractors.domain_extractor import DomainExtractor
+from leaktopus.domain.extractors.email_extractor import EmailExtractor
 
 
 @pytest.fixture(name="app")
@@ -73,6 +75,7 @@ def potential_leak_source_scan_status_provider_mock(mocker):
         PotentialLeakSourceScanStatusProviderInterface, "get_status"
     )
 
+
 @pytest.fixture
 def domain_extractor():
     return DomainExtractor(
@@ -81,6 +84,7 @@ def domain_extractor():
             "net",
         ]
     )
+
 
 @pytest.fixture
 def email_extractor():
