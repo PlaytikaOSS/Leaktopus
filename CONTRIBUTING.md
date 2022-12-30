@@ -1,5 +1,22 @@
 # Contribution guidelines
 
+## Backend Architecture
+The backend follows the [Clean Architecture principles](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html).
+
+### Structure
+
+* `leaktopus/domain` - Contains the domain use cases, interfaces (aka contracts), entities - the core of the business logic.
+* `leaktopus/details` - Contains the implementations of the domain's interfaces, routing, asynchoronous tasks, and the database models.
+* `leaktopus/services` - A glue between the domain and the details. Contains the services that are used by the domain use cases using the implementations from the details directory.
+* `leaktopus/app.py` - The main application file. Contains the Flask app initialization and the routing.
+* `leaktopus/factory.py` - The factory that creates the project services based on the settings in `settings.py`.
+
+### Common Language (Semantics)
+* `usecase` - A single action that the user can perform. It usually includes a set of actions that are performed in a specific order. 
+* `entrypoint` - Where we initiate our details and execute a use case.
+* `task` - A background job that is executed asynchronously. For example: a celery task, a thread.
+* `service` - A glue between the domain's interfaces and the details' implementations. It is used by the use cases to execute the details' implementations.
+
 ## Development Environment Setup
 If you wish to contribute to Leaktopus or run it in development mode, please follow this section. 
 
@@ -31,23 +48,6 @@ FLASK_APP="`pwd`/leaktopus/app.py" FLASK_DEBUG=1 flask run -p 8000
 import dotenv
 dotenv.load_dotenv('./.env')
 ```
-
-### Structure
-
-The backend follows the Clean Architecture principles. Its structure is as follows:
-
-* `leaktopus/domain` - Contains the domain use cases, interfaces (aka contracts), entities - the core of the business logic.
-* `leaktopus/details` - Contains the implementations of the domain's interfaces, routing, asynchoronous tasks, and the database models.
-* `leaktopus/services` - A glue between the domain and the details. Contains the services that are used by the domain use cases using the implementations from the details directory.
-* `leaktopus/app.py` - The main application file. Contains the Flask app initialization and the routing.
-* `leaktopus/factory.py` - The factory that creates the project services based on the settings in `settings.py`.
-
-### Common Lanague
-
-* `usecase` - A usecase is a single action that the user can perform. It usually includes a set of actions that are performed in a specific order. 
-* `entrypoint` - Where we initial our details and execute a use case.
-* `task` - A task is a background job that is executed asynchronously. E.g: a celery task, a thread.
-* `service` - A glue between the domain's interfaces and the details' implementations. It is used by the use cases to execute the details' implementations.
 
 #### Frontend
 ```bash
