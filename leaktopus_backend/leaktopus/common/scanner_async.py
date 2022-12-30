@@ -399,9 +399,7 @@ def scan(
 ):
     from leaktopus.common.github_indexer import github_index_commits
     from leaktopus.common.leak_enhancer import leak_enhancer
-    from leaktopus.details.entrypoints.alerts.task import (
-        trigger_pages_scan_task_entrypoint,
-    )
+    from leaktopus.details.entrypoints.scan.task import trigger_pages_scan_task_entrypoint
     import leaktopus.common.scans as scans
 
     # Do not run scan if one for the same search query is already running.

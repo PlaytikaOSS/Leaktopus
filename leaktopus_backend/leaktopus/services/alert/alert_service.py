@@ -27,7 +27,7 @@ class AlertService:
         for leak in leaks:
             new_leak = True
             for alert in alerts:
-                if leak.pid == alert.leak_id:
+                if leak.leak_id == alert.leak_id:
                     new_leak = False
                     break
             if new_leak:

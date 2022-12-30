@@ -1,8 +1,14 @@
 import pytest
 
 from leaktopus.app import create_app
+from leaktopus.domain.extractors.domain_extractor import DomainExtractor
+from leaktopus.domain.extractors.email_extractor import EmailExtractor
 from leaktopus.services.alert.alert_service import AlertService
 from leaktopus.services.alert.memory_provider import AlertMemoryProvider
+from leaktopus.services.contributor.contributor_service import ContributorService
+from leaktopus.services.contributor.memory_provider import ContributorMemoryProvider
+from leaktopus.services.domain.domain_service import DomainService
+from leaktopus.services.domain.memory_provider import DomainMemoryProvider
 from leaktopus.services.ignore_pattern.ignore_pattern_provider_interface import (
     IgnorePatternProviderInterface,
 )
@@ -13,11 +19,12 @@ from leaktopus.services.notification.notification_service import NotificationSer
 from leaktopus.services.potential_leak_source_scan_status.interface import (
     PotentialLeakSourceScanStatusProviderInterface,
 )
-
+from leaktopus.services.secret.memory_provider import SecretMemoryProvider
+from leaktopus.services.secret.secret_service import SecretService
+from leaktopus.services.sensitive_keyword.memory_provider import SensitiveKeywordMemoryProvider
+from leaktopus.services.sensitive_keyword.sensitive_keyword_service import SensitiveKeywordService
 from leaktopus.tasks.clients.memory_client import MemoryClient
 from leaktopus.tasks.task_manager import TaskManager
-from leaktopus.domain.extractors.domain_extractor import DomainExtractor
-from leaktopus.domain.extractors.email_extractor import EmailExtractor
 
 
 @pytest.fixture(name="app")
@@ -53,7 +60,8 @@ def add_leak():
         "leaktopus-integration-test",
         "github",
         "",
-        "",
+        # Has two IOLs.
+        '[{"file_name": "index.html", "file_url": "https://github.com/PlaytikaOSS/Leaktopus/blob/1234567/index.html", "org_emails": []}, {"file_name": "index.htm", "file_url": "https://github.com/PlaytikaOSS/Leaktopus/blob/1234567/index.htm", "org_emails": []}]',
         False,
         "2000-01-01 00:00:00"
     )
@@ -112,3 +120,31 @@ def email_extractor():
 @pytest.fixture
 def ignore_pattern_provider_mock(mocker):
     return mocker.patch.object(IgnorePatternProviderInterface, "get_ignore_patterns")
+
+
+@pytest.fixture()
+def factory_domain_service():
+    return lambda domains=[], override_methods={}: DomainService(
+        DomainMemoryProvider(domains=domains, override_methods=override_methods)
+    )
+
+
+@pytest.fixture()
+def factory_contributor_service():
+    return lambda contributors=[], override_methods={}: ContributorService(
+        ContributorMemoryProvider(contributors=contributors, override_methods=override_methods)
+    )
+
+
+@pytest.fixture()
+def factory_secret_service():
+    return lambda secrets=[], override_methods={}: SecretService(
+        SecretMemoryProvider(secrets=secrets, override_methods=override_methods)
+    )
+
+
+@pytest.fixture()
+def factory_sensitive_keyword_service():
+    return lambda sensitive_keywords=[], override_methods={}: SensitiveKeywordService(
+        SensitiveKeywordMemoryProvider(sensitive_keywords=sensitive_keywords, override_methods=override_methods)
+    )

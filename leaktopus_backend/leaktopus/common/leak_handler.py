@@ -14,14 +14,6 @@ def get_leak_by_url(url):
     return known_leaks[0]
 
 
-def get_leak_by_id(id):
-    leaks = fetch_leaks_from_db({"pid": id})
-    if not leaks:
-        return []
-
-    return leaks
-
-
 def leaks_result(leaks):
     return {
         "success": True,

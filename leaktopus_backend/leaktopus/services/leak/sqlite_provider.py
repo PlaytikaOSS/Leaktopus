@@ -11,11 +11,25 @@ class LeakSqliteProvider(LeakProviderInterface):
     def __init__(self, options):
         self.db = options["db"]
 
+    def fix_names_difference_between_db_and_entity(self, args):
+        new_args = {}
+        for key in args.keys():
+            if key == "leak_id":
+                new_args["pid"] = args.get(key)
+            elif key == "type":
+                new_args["leak_type"] = args.get(key)
+            else:
+                new_args[key] = args.get(key)
+
+        return new_args
+
+
     def get_leaks(self, **kwargs) -> list[Leak]:
         sql_cond = []
         sql_vars = ()
-        for col in kwargs.keys():
-            sql_vars = (*sql_vars, kwargs[col])
+        filter_args = self.fix_names_difference_between_db_and_entity(kwargs)
+        for col in filter_args.keys():
+            sql_vars = (*sql_vars, filter_args[col])
             sql_cond.append(col)
 
         c = self.db.cursor()
@@ -28,27 +42,6 @@ class LeakSqliteProvider(LeakProviderInterface):
             res = c.execute("SELECT * FROM leak ORDER BY created_at DESC")
 
         leaks_res = res.fetchall()
-
-        # @todo Replace the secrets fetching with one query with join and grouping.
-        for i in range(len(leaks_res)):
-            secrets_res = c.execute("SELECT * FROM secret WHERE leak_id=? ORDER BY created_at DESC",
-                                      (leaks_res[i]["pid"],))
-            leaks_res[i]["secrets"] = secrets_res.fetchall()
-
-            domains_res = c.execute("SELECT * FROM domain WHERE leak_id=? ORDER BY created_at DESC",
-                                      (leaks_res[i]["pid"],))
-            leaks_res[i]["domains"] = domains_res.fetchall()
-
-            domains_res = c.execute(
-                "SELECT id, name, author_email, committer_email, is_organization_domain FROM contributors WHERE leak_id=? ORDER BY created_at DESC",
-                (leaks_res[i]["pid"],))
-            leaks_res[i]["contributors"] = domains_res.fetchall()
-
-            domains_res = c.execute(
-                "SELECT id, keyword, url FROM sensitive_keywords WHERE leak_id=? ORDER BY created_at DESC",
-                (leaks_res[i]["pid"],))
-            leaks_res[i]["sensitive_keywords"] = domains_res.fetchall()
-
         return self.to_entity(leaks_res)
 
     def add_leak(self, url, search_query, leak_type, context, leaks, acknowledged, last_modified, **kwargs):

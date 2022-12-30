@@ -2,19 +2,8 @@ from leaktopus.services.leak.leak_service import LeakService
 from leaktopus.tasks.send_alerts_notification_task import SendAlertsNotificationTask
 
 
-def add_leak(leak_service: LeakService):
-    return leak_service.add_leak(
-        "https://leak.com",
-        "leaktopus",
-        "github",
-        "",
-        "",
-        False,
-        "2000-01-01 00:00:00"
-    )
-
-
 def test_should_send_alerts_notification(
+        add_leak,
         factory_leak_service,
         factory_alert_service,
         factory_notification_service
@@ -71,6 +60,7 @@ def test_should_not_send_alerts_notification_when_no_leaks(
 
 
 def test_should_send_multiple_leaks_in_notification(
+        add_leak,
         factory_leak_service,
         factory_alert_service,
         factory_notification_service

@@ -16,7 +16,7 @@ class LeakMemoryProvider(LeakProviderInterface):
         for prop, value in kwargs.items():
             filtered_leaks = [
                 s for s in filtered_leaks
-                if s[prop] == value
+                if getattr(s, prop) == value
             ]
 
         return (
@@ -33,30 +33,30 @@ class LeakMemoryProvider(LeakProviderInterface):
             self.add_leak(
                 leak.url,
                 leak.search_query,
-                leak.leak_type,
+                leak.type,
                 leak.context,
-                leak.leaks,
+                leak.IOL,
                 leak.acknowledged,
                 leak.last_modified,
                 **leak
             )
 
-    def add_leak(self, url, search_query, leak_type, context, leaks, acknowledged, last_modified, **kwargs):
-        pid = len(self.leaks)+1
+    def add_leak(self, url, search_query, type, context, IOL, acknowledged, last_modified, **kwargs):
+        leak_id = len(self.leaks)+1
         now = datetime.datetime.now()
         created_at = now.strftime("%Y-%m-%d %H:%M:%S")
-        leak = Leak(pid, url, search_query, leak_type, context, leaks, acknowledged, last_modified, created_at, **kwargs)
+        leak = Leak(leak_id, url, search_query, type, context, IOL, acknowledged, last_modified, created_at, **kwargs)
 
         self.leaks.append(leak)
         return (
             self.override_methods["add_leak"]()
             if "add_leak" in self.override_methods
-            else pid
+            else leak_id
         )
 
     def update_leak(self, leak_id, **kwargs):
         for leak in self.leaks:
-            if leak.pid == leak_id:
+            if leak.leak_id == leak_id:
                 for prop, value in kwargs.items():
                     leak[prop] = value
 

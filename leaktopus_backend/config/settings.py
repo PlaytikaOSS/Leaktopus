@@ -36,6 +36,32 @@ SERVICES = {
             "db": True,
         },
     },
+    "domain": {
+        "provider": "sqlite",
+        "options": {
+            "db": True,
+        },
+    },
+    "sensitive_keyword": {
+        "provider": "sqlite",
+        "options": {
+            "db": True,
+        },
+    },
+
+    "secret": {
+        "provider": "sqlite",
+        "options": {
+            "db": True,
+        },
+    },
+
+    "contributor": {
+        "provider": "sqlite",
+        "options": {
+            "db": True,
+        },
+    },
     "ignore_pattern": {"providers": ["sqlite"]},
     "leaktopus_config": {
         "providers": ["initial_config"],

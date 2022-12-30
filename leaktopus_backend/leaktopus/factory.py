@@ -3,6 +3,10 @@ from flask import current_app
 from leaktopus.common.db_handler import get_db
 from leaktopus.services.alert.alert_service import AlertService
 from leaktopus.services.alert.sqlite_provider import AlertSqliteProvider
+from leaktopus.services.contributor.contributor_service import ContributorService
+from leaktopus.services.contributor.sqlite_provider import ContributorSqliteProvider
+from leaktopus.services.domain.domain_service import DomainService
+from leaktopus.services.domain.sqlite_provider import DomainSqliteProvider
 from leaktopus.services.ignore_pattern.ignore_pattern_service import (
     IgnorePatternService,
 )
@@ -40,6 +44,10 @@ from leaktopus.details.scan.potential_leak_source_providers.github.page_results_
 )
 from leaktopus.domain.extractors.domain_extractor import DomainExtractor
 from leaktopus.domain.extractors.email_extractor import EmailExtractor
+from leaktopus.services.secret.secret_service import SecretService
+from leaktopus.services.secret.sqlite_provider import SecretSqliteProvider
+from leaktopus.services.sensitive_keyword.sensitive_keyword_service import SensitiveKeywordService
+from leaktopus.services.sensitive_keyword.sqlite_provider import SensitiveKeywordSqliteProvider
 
 
 def provider_config_require_db(config):
@@ -56,6 +64,58 @@ def create_leak_service():
     leak_service = LeakService(leak_provider)
     return leak_service
 
+def create_contributor_provider_from_config(config):
+    options = provider_config_require_db(config)
+    return {"sqlite": ContributorSqliteProvider,}[
+        config["provider"]
+    ](options)
+
+def create_contributor_service():
+    contributor_provider = create_contributor_provider_from_config(
+        current_app.config["SERVICES"]["contributor"]
+    )
+    contributor_service = ContributorService(contributor_provider)
+    return contributor_service
+
+def create_domain_provider_from_config(config):
+    options = provider_config_require_db(config)
+    return {"sqlite": DomainSqliteProvider,}[
+        config["provider"]
+    ](options)
+
+
+def create_domain_service():
+    domain_provider = create_domain_provider_from_config(
+        current_app.config["SERVICES"]["domain"]
+    )
+    domain_service = DomainService(domain_provider)
+    return domain_service
+
+def create_secret_provider_from_config(config):
+    options = provider_config_require_db(config)
+    return {"sqlite": SecretSqliteProvider,}[
+        config["provider"]
+    ](options)
+
+def create_secret_service():
+    secret_provider = create_secret_provider_from_config(
+        current_app.config["SERVICES"]["secret"]
+    )
+    secret_service = SecretService(secret_provider)
+    return secret_service
+
+def create_sensitive_keyword_provider_from_config(config):
+    options = provider_config_require_db(config)
+    return {"sqlite": SensitiveKeywordSqliteProvider,}[
+        config["provider"]
+    ](options)
+
+def create_sensitive_keyword_service():
+    sensitive_keyword_provider = create_sensitive_keyword_provider_from_config(
+        current_app.config["SERVICES"]["sensitive_keyword"]
+    )
+    sensitive_keyword_service = SensitiveKeywordService(sensitive_keyword_provider)
+    return sensitive_keyword_service
 
 def create_leak_provider_from_config(config):
     options = provider_config_require_db(config)

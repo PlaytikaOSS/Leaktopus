@@ -28,6 +28,6 @@ class SendAlertsNotificationTask:
 
         # Add the new notified leaks to DB as alerts.
         for leak in leaks_notified:
-            self.alert_service.add_alert(leak.pid, notification_type)
+            self.alert_service.add_alert(leak.leak_id, notification_type)
 
         return leaks_notified
