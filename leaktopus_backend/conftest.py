@@ -47,6 +47,19 @@ def factory_leak_service():
 
 
 @pytest.fixture()
+def add_leak():
+    return lambda leak_service: leak_service.add_leak(
+        "https://leakexample.com",
+        "leaktopus-integration-test",
+        "github",
+        "",
+        "",
+        False,
+        "2000-01-01 00:00:00"
+    )
+
+
+@pytest.fixture()
 def factory_alert_service():
     return lambda alerts=[], override_methods={}: AlertService(
         AlertMemoryProvider(alerts=alerts, override_methods=override_methods)

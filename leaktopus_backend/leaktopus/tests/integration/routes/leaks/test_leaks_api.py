@@ -6,11 +6,8 @@ def test_get_leak_by_id_with_success(
         app,
         client,
         factory_leak_service,
-        # add_leak
 ):
     with app.app_context():
-        # leak_service = factory_leak_service()
-        # leak_id = add_leak(leak_service)
 
         scan_response = client.get(
             url_for(
@@ -42,5 +39,4 @@ def test_get_leak_by_id_with_success(
         )
 
         assert len(leak_response.json["data"]) > 0
-        data = leak_response.json["data"][0]["IOL"]
-        assert len(data['IOL']) > 0
+        assert len(leak_response.json["data"][0]["IOL"]) > 0
