@@ -1,4 +1,4 @@
-from flask import Flask, g, redirect, url_for, abort
+from flask import Flask
 from flask_cors import CORS
 from werkzeug.debug import DebuggedApplication
 from celery import Celery
@@ -7,12 +7,10 @@ from config.celery import cronjobs
 from leaktopus.common.db_handler import close_connection
 from leaktopus.routes.github.github_api import github_api
 from leaktopus.routes.system.system_api import system_api
-from leaktopus.routes.alerts.alerts_api import alerts_api
+from leaktopus.details.entrypoints.alerts.alerts_api import alerts_api
 from leaktopus.routes.leaks.leaks_api import leaks_api
-from leaktopus.routes.scans.scans_api import scans_api
+from leaktopus.details.entrypoints.scan.api import scans_api
 from leaktopus.tasks.clients.celery_client import CeleryClient
-from leaktopus.utils.common_imports import logger
-import os
 from flasgger import Swagger
 
 

@@ -1,4 +1,8 @@
-from leaktopus.factory import create_leak_service, create_alert_service, create_notification_service
+from leaktopus.factory import (
+    create_leak_service,
+    create_alert_service,
+    create_notification_service,
+)
 from leaktopus.services.leak.leak_service import LeakService
 from leaktopus.tasks.send_alerts_notification_task import SendAlertsNotificationTask
 
@@ -21,9 +25,7 @@ def test_send_alerts_notification_task_endpoint_with_success(
             notification_service = create_notification_service(notification_provider)
 
             leaks_notified = SendAlertsNotificationTask(
-                leak_service,
-                alert_service,
-                notification_service
+                leak_service, alert_service, notification_service
             ).run()
 
             alert_for_leak = alert_service.get_alerts(type=notification_provider)

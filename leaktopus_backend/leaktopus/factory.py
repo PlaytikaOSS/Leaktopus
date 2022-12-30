@@ -1,4 +1,4 @@
-from flask import current_app, g
+from flask import current_app
 
 from leaktopus.common.db_handler import get_db
 from leaktopus.services.alert.alert_service import AlertService
@@ -17,19 +17,29 @@ from leaktopus.services.leaktopus_config.leaktopus_config_service import (
 from leaktopus.services.leaktopus_config.initial_config_leaktopus_config_provider import (
     InitialConfigLeaktopusConfigProvider,
 )
-from leaktopus.services.notification.memory_provider import NotificationMemoryProvider
 from leaktopus.services.notification.ms_teams_provider import (
     NotificationMsTeamsProvider,
 )
 from leaktopus.services.notification.notification_service import NotificationService
 from leaktopus.services.notification.slack_provider import NotificationSlackProvider
-from leaktopus.services.potential_leak_source_scan_status.potential_leak_source_scan_status_service import (
+from leaktopus.services.potential_leak_source_scan_status.service import (
     PotentialLeakSourceScanStatusService,
 )
-from leaktopus.services.potential_leak_source_scan_status.sqlite_potential_leak_source_scan_status_provider import (
-    SqlitePotentialLeakSourceScanStatusProvider,
+from leaktopus.services.potential_leak_source_scan_status.sqlite_provider import (
+    PotentialLeakSourceScanStatusSqliteProvider,
 )
-from leaktopus.utils.common_imports import logger
+
+from leaktopus.details.scan.dispatchers.celery_search_results_dispatcher import (
+    CelerySearchResultsDispatcher,
+)
+from leaktopus.details.scan.potential_leak_source_providers.github.filter import (
+    GithubPotentialLeakSourceFilter,
+)
+from leaktopus.details.scan.potential_leak_source_providers.github.page_results_fetcher import (
+    GithubPotentialLeakSourcePageResultsFetcher,
+)
+from leaktopus.domain.extractors.domain_extractor import DomainExtractor
+from leaktopus.domain.extractors.email_extractor import EmailExtractor
 
 
 def provider_config_require_db(config):
@@ -135,7 +145,7 @@ def create_leaktopus_config_service():
 def create_potential_leak_source_scan_status_service():
     supported_providers = {
         "sqlite": [
-            SqlitePotentialLeakSourceScanStatusProvider,
+            PotentialLeakSourceScanStatusSqliteProvider,
             {"db": get_db()},
         ],
     }
@@ -148,3 +158,35 @@ def create_potential_leak_source_scan_status_service():
     return PotentialLeakSourceScanStatusService(
         provider=provider,
     )
+
+
+def create_potential_leak_source_page_results_fetcher(
+    provider_type,
+):
+    if provider_type == "github":
+        return GithubPotentialLeakSourcePageResultsFetcher()
+
+
+def create_search_results_dispatcher(dispatcher_type):
+    if dispatcher_type == "celery":
+        from leaktopus.app import create_celery_app
+
+        client = create_celery_app()
+        return CelerySearchResultsDispatcher(client=client)
+
+
+def create_potential_leak_source_filter(
+    provider_type: str,
+    leak_service: LeakService,
+    leaktopus_config_service: LeaktopusConfigService,
+    email_extractor: EmailExtractor,
+):
+    if provider_type == "github":
+        ignore_pattern_service = create_ignore_pattern_service()
+        return GithubPotentialLeakSourceFilter(
+            leak_service=leak_service,
+            ignore_pattern_service=ignore_pattern_service,
+            domain_extractor=DomainExtractor(tlds=leaktopus_config_service.get_tlds()),
+            email_extractor=email_extractor,
+            leaktopus_config_service=leaktopus_config_service,
+        )
