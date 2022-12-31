@@ -421,7 +421,7 @@ def scan(
         )
         chain = github_preprocessor.s(
             search_query=search_query, scan_id=scan_id
-        ) | trigger_pages_scan_task_entrypoint.s(potential_leak_source_request)
+        ) | trigger_pages_scan_task_entrypoint.s(potential_leak_source_request, "celery")
         chain.apply_async(link_error=error_handler.s(scan_id=scan_id))
     else:
         chain = (

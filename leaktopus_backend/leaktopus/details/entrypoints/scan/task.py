@@ -159,8 +159,7 @@ def save_potential_leak_source_page_results_task_entrypoint(
         search_query=potential_leak_source_request.search_query
     )
     for leak in leaks:
-        context = json.loads(leak.context)
-        repos_full_names.append(context["owner"] + "/" + context["repo_name"])
+        repos_full_names.append(leak.context["owner"] + "/" + leak.context["repo_name"])
 
     chain = (
         leak_enhancer.s(
