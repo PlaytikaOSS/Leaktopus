@@ -32,9 +32,10 @@ class GithubPotentialLeakSourcePageResultsFetcher(
         potential_leak_sources = []
         for result in page_results:
             potential_leak_sources.append(self.generate_potential_leak_source(result))
-            return potential_leak_sources
 
-    def generate_potential_leak_source(self, result):
+        return potential_leak_sources
+
+    def generate_potential_leak_source(self, result) -> PotentialLeakSource:
         return PotentialLeakSource(
             url=result.repository.clone_url,
             html_url=result.html_url,
