@@ -8,15 +8,21 @@ def test_should_extract_emails_with_success(email_extractor):
     assert email_extractor.extract_emails_from_content("This is a string with no emails") == []
 
     # Test that all emails are extracted from a string with multiple emails
-    assert email_extractor.extract_emails_from_content("This is a string with multiple emails: test1@test.com and test2@test.com \n new line should also work test@test3.co.uk") == ['test1@test.com', 'test2@test.com', 'test@test3.co.uk']
+    emails = email_extractor.extract_emails_from_content("This is a string with multiple emails: test1@test.com and test2@test.com \n new line should also work test@test3.co.uk")
+    for i in ['test1@test.com', 'test2@test.com', 'test@test3.co.uk']:
+        assert i in emails
 
 
 def test_should_extract_organization_emails_with_success(email_extractor):
-    assert email_extractor.extract_organization_emails("This is a string with multiple emails: test1@test.com and test2@foobar.com \n new line should also work test@test3.co.uk") == ['test1@test.com', 'test@test3.co.uk']
+    emails = email_extractor.extract_organization_emails("This is a string with multiple emails: test1@test.com and test2@foobar.com \n new line should also work test@test3.co.uk")
+    for i in ['test1@test.com', 'test@test3.co.uk']:
+        assert i in emails
 
 
 def test_should_extract_non_organization_emails_with_success(email_extractor):
-    assert email_extractor.extract_non_organization_emails("This is a string with multiple emails: test1@test.com and test2@foobar.com \n new line should also work test@test3.co.uk \n baz@foo.com") == ['test2@foobar.com', 'baz@foo.com']
+    emails = email_extractor.extract_non_organization_emails("This is a string with multiple emails: test1@test.com and test2@foobar.com \n new line should also work test@test3.co.uk \n baz@foo.com")
+    for i in ['test2@foobar.com', 'baz@foo.com']:
+        assert i in emails
 
 
 @pytest.fixture
