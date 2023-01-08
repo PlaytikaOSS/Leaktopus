@@ -1,6 +1,7 @@
 import json
 from typing import List
 
+from leaktopus.domain.leak.usecases.get_lastest_last_modified_leak import GetLatestLastModifiedLeakUseCase
 from leaktopus.services.leak.leak_service import LeakService
 from leaktopus.services.potential_leak_source_scan_status.service import (
     PotentialLeakSourceScanStatusService,
@@ -36,25 +37,28 @@ class SavePotentialLeakSourcePageUseCase:
     ):
         self.guard_empty_page_results(page_results)
         filtered_results = self.filter_results(scan_id, page_results)
-        grouped_results = self.group_results_before_save(filtered_results, search_query)
-        self.save_results(grouped_results, search_query)
+        results_with_enriched_iols = self.enrich_iols_in_results_before_save(filtered_results, search_query)
+        self.save_results(results_with_enriched_iols, search_query)
         self.potential_leak_source_scan_status_service.mark_as_analyzing(
             scan_id, current_page_number
         )
-        return grouped_results
+        return results_with_enriched_iols
 
-    def group_results_before_save(self, filtered_results, search_query):
-        grouped_results = []
+    def enrich_iols_in_results_before_save(self, filtered_results, search_query):
+        enrich_iol_results = []
         for result in filtered_results:
+            # @todo Should we extract emails in this phase although we'll extract it in the analysis phase as well?
             org_emails = self.email_extractor.extract_organization_emails(
                 json.dumps(result.content)
             )
-            leak_data = self.generate_leak_data(result, org_emails)
-            is_url_exists = self.is_url_exists(grouped_results, result)
-            grouped_results = self.append_or_update_group_result(
-                grouped_results, is_url_exists, leak_data, search_query, result
+            iols_data = self.generate_leak_data(result, org_emails)
+
+            enrich_iol_results.append(
+                self.generate_result(
+                    result, iols_data
+                )
             )
-        return grouped_results
+        return enrich_iol_results
 
     def guard_empty_page_results(self, page_results):
         if not page_results:
@@ -82,49 +86,62 @@ class SavePotentialLeakSourcePageUseCase:
                 break
         return is_url_exists
 
-    def append_or_update_group_result(
-        self,
-        grouped_results,
-        is_url_exists,
-        leak_data,
-        search_query,
-        potential_leak_source,
-    ):
-        if is_url_exists:
-            existing_res_key = None
-            for i, gr in enumerate(grouped_results):
-                if gr["potential_source_page"].url == potential_leak_source.url:
-                    existing_res_key = i
 
-            grouped_results[existing_res_key]["leaks"].append(leak_data)
-        else:
-            grouped_results.append(
-                self.generate_result(
-                    grouped_results, potential_leak_source, search_query, leak_data
-                )
-            )
-        return grouped_results
+    def generate_result(self, search_result, iols_data):
 
-    def generate_result(self, grouped_results, search_result, search_query, leak_data):
         return {
             "potential_source_page": search_result,
-            "leaks": [leak_data],
+            "iol": [iols_data],
         }
 
-    def save_results(self, grouped_results, search_query):
-        for result in grouped_results:
+    def get_non_acknowledged_leaks(self, leaks):
+        non_acknowledged_leaks = []
+
+        for leak in leaks:
+            if not leak.acknowledged:
+                non_acknowledged_leaks.append(leak)
+
+        return non_acknowledged_leaks
+
+
+    def save_results(self, results_with_enriched_iols, search_query):
+        for result in results_with_enriched_iols:
             potential_source_page = result["potential_source_page"]
-            existing_leak = self.leak_service.get_leaks(url=potential_source_page.url)
-            # @todo Update leak in case that the repo was modified since previous scan and it wasn't acknowledged yet.
-            if existing_leak and not existing_leak["acknowledged"]:
+            existing_leaks = self.leak_service.get_leaks(url=potential_source_page.url, search_query=search_query)
+
+            if len(existing_leaks) == 0:
+                self.leak_service.add_leak(
+                    potential_source_page.url,
+                    search_query,
+                    potential_source_page.source,
+                    json.dumps(potential_source_page.context),
+                    json.dumps(result["iol"]),
+                    False,
+                    potential_source_page.last_modified,
+                )
                 continue
 
-            self.leak_service.add_leak(
-                potential_source_page.url,
-                search_query,
-                potential_source_page.source,
-                json.dumps(potential_source_page.context),
-                json.dumps(result["leaks"]),
-                False,
-                potential_source_page.last_modified,
-            )
+            non_acknowledged_leaks = self.get_non_acknowledged_leaks(existing_leaks)
+            if non_acknowledged_leaks:
+                # Update leak IOLs and context.
+                self.leak_service.update_leak(
+                    non_acknowledged_leaks[0].leak_id,
+                    # Is it correct to assume that there'll always be only one IOL per PLS result?
+                    IOL=result["iol"][0],
+                    context=potential_source_page.context,
+                    last_modified=potential_source_page.last_modified,
+                )
+            else:
+                last_modified_leak = GetLatestLastModifiedLeakUseCase().execute(existing_leaks)
+                last_modified_leak_datetime = last_modified_leak.last_modified
+
+                if last_modified_leak_datetime > potential_source_page.last_modified:
+                    self.leak_service.add_leak(
+                        potential_source_page.url,
+                        search_query,
+                        potential_source_page.source,
+                        json.dumps(potential_source_page.context),
+                        json.dumps(result["iol"]),
+                        False,
+                        potential_source_page.last_modified,
+                    )
