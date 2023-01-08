@@ -49,7 +49,7 @@ class AbstractPotentialLeakSourceFilter(PotentialLeakSourceFilterInterface):
         if self.too_many_non_org_emails(content):
             return False
 
-        if self.too_many_domain_emails(content):
+        if self.too_many_domains(content):
             return False
 
         return True
@@ -107,6 +107,6 @@ class AbstractPotentialLeakSourceFilter(PotentialLeakSourceFilterInterface):
         emails = self.email_extractor.extract_non_organization_emails(content)
         return len(emails) >= self.leaktopus_config_service.get_max_non_org_emails()
 
-    def too_many_domain_emails(self, content):
+    def too_many_domains(self, content):
         domains = self.domain_extractor.extract(content)
         return len(domains) >= self.leaktopus_config_service.get_max_domain_emails()

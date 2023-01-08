@@ -27,9 +27,7 @@ from leaktopus.domain.scan.entities.potential_leak_source import PotentialLeakSo
                 name="name_1",
                 html_url="html_url_1",
                 last_modified="Sat, 20 Dec 2022 15:34:56 UTC",
-                content="contnet_1",
-                repo_name="repo_name_1",
-                repo_description="repo_description_1",
+                content="content_1",
                 context={
                     "stargazers_count": 1,
                     "forks_count": 1,
@@ -44,9 +42,7 @@ from leaktopus.domain.scan.entities.potential_leak_source import PotentialLeakSo
                 name="name_1",
                 html_url="html_url_1",
                 last_modified="Sat, 20 Dec 2022 15:34:56 UTC",
-                content="contnet_1",
-                repo_name="repo_name_1",
-                repo_description="repo_description_1",
+                content="content_1",
                 context={
                     "stargazers_count": 11,
                     "forks_count": 11,

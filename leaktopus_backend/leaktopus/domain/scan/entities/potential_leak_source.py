@@ -8,7 +8,5 @@ class PotentialLeakSource:
     html_url: str
     last_modified: str
     content: str
-    repo_name: str
-    repo_description: str
     context: dict
     source: str

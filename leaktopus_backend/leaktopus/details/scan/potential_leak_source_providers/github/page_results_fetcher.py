@@ -43,8 +43,6 @@ class GithubPotentialLeakSourcePageResultsFetcher(
             source="github",
             last_modified=datetime_to_timestamp(result.repository.last_modified),
             content=result.decoded_content.decode(),
-            repo_name=result.repository.name,
-            repo_description=result.repository.description,
             context={
                 "repo_name": result.repository.name,
                 "owner": result.repository.owner.login
