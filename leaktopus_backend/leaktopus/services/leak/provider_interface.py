@@ -22,6 +22,7 @@ class LeakProviderInterface(Protocol):
     ):
         pass
 
+    @abstractmethod
     def save_leaks(self, leaks):
         pass
 

@@ -58,7 +58,16 @@ class LeakMemoryProvider(LeakProviderInterface):
         for leak in self.leaks:
             if leak.leak_id == leak_id:
                 for prop, value in kwargs.items():
-                    leak[prop] = value
+                    if prop == "IOL":
+                        iols = leak.IOL
+                        # check if the text already exists in the leaks list
+                        if value not in iols:
+                            # if not, add it to the list
+                            iols.append(value)
+                            # update the leaks attribute of the leak object
+                            setattr(leak, prop, iols)
+                    else:
+                        setattr(leak, prop, value)
 
     def delete_leak_by_url(self, url, **kwargs):
         for leak in self.leaks:
