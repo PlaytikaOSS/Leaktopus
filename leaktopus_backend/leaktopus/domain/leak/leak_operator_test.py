@@ -1,7 +1,6 @@
-import pytest
 from datetime import datetime, timedelta
 
-from leaktopus.domain.leak.usecases.get_lastest_last_modified_leak import GetLatestLastModifiedLeakUseCase
+from leaktopus.domain.leak.leak_operator import LeakOperator
 from leaktopus.services.leak.leak import Leak
 
 
@@ -19,5 +18,5 @@ def test_should_return_latest_last_modified_leak(
         Leak(2, 'leak_url_2', 'search_query', 'source', '{}', '{}', True, now, two_days_ago.strftime("%Y-%m-%d %H:%M:%S"))
     ]
 
-    latest_last_modified_leak = GetLatestLastModifiedLeakUseCase().execute(leaks)
+    latest_last_modified_leak = LeakOperator.get_latest_last_modified_leak(leaks)
     assert latest_last_modified_leak.last_modified == leaks[1].last_modified

@@ -1,7 +1,7 @@
 import json
 from typing import List
 
-from leaktopus.domain.leak.usecases.get_lastest_last_modified_leak import GetLatestLastModifiedLeakUseCase
+from leaktopus.domain.leak.leak_operator import LeakOperator
 from leaktopus.services.leak.leak_service import LeakService
 from leaktopus.services.potential_leak_source_scan_status.service import (
     PotentialLeakSourceScanStatusService,
@@ -132,7 +132,7 @@ class SavePotentialLeakSourcePageUseCase:
                     last_modified=potential_source_page.last_modified,
                 )
             else:
-                last_modified_leak = GetLatestLastModifiedLeakUseCase().execute(existing_leaks)
+                last_modified_leak = LeakOperator.get_latest_last_modified_leak(existing_leaks)
                 last_modified_leak_datetime = last_modified_leak.last_modified
 
                 if last_modified_leak_datetime > potential_source_page.last_modified:
