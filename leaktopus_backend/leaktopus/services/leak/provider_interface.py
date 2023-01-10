@@ -15,15 +15,11 @@ class LeakProviderInterface(Protocol):
         search_query,
         leak_type,
         context,
-        leaks,
+        iol,
         acknowledged,
         last_modified,
         **kwargs
     ):
-        pass
-
-    @abstractmethod
-    def save_leaks(self, leaks):
         pass
 
     @abstractmethod

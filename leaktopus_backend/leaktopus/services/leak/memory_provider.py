@@ -25,27 +25,11 @@ class LeakMemoryProvider(LeakProviderInterface):
             else filtered_leaks
         )
 
-    def save_leaks(self, leaks):
-        if "save_leaks" in self.override_methods:
-            return self.override_methods["save_leaks"](leaks)
-
-        for leak in leaks:
-            self.add_leak(
-                leak.url,
-                leak.search_query,
-                leak.type,
-                leak.context,
-                leak.IOL,
-                leak.acknowledged,
-                leak.last_modified,
-                **leak
-            )
-
-    def add_leak(self, url, search_query, type, context, IOL, acknowledged, last_modified, **kwargs):
+    def add_leak(self, url, search_query, type, context, iol, acknowledged, last_modified, **kwargs):
         leak_id = len(self.leaks)+1
         now = datetime.datetime.now()
         created_at = now.strftime("%Y-%m-%d %H:%M:%S")
-        leak = Leak(leak_id, url, search_query, type, context, IOL, acknowledged, last_modified, created_at, **kwargs)
+        leak = Leak(leak_id, url, search_query, type, context, iol, acknowledged, last_modified, created_at, **kwargs)
 
         self.leaks.append(leak)
         return (
@@ -58,8 +42,8 @@ class LeakMemoryProvider(LeakProviderInterface):
         for leak in self.leaks:
             if leak.leak_id == leak_id:
                 for prop, value in kwargs.items():
-                    if prop == "IOL":
-                        iols = leak.IOL
+                    if prop == "iol":
+                        iols = leak.iol
                         # check if the text already exists in the leaks list
                         if value not in iols:
                             # if not, add it to the list

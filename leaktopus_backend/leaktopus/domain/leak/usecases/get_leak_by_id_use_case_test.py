@@ -42,7 +42,7 @@ def test_should_get_leak_by_id_successfully(
     assert result_leak["leak_id"] == leak_id
 
     # Assert that the leak has its IOLs populated.
-    assert type(result_leak["IOL"]) is list and len(result_leak["IOL"]) == 2
+    assert type(result_leak["iol"]) is list and len(result_leak["iol"]) == 2
 
     # Assert that the leak has the right secrets, domains, contributors and sensitive keywords.
     assert len(result_leak["secrets"]) == 1

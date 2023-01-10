@@ -114,8 +114,8 @@ class SavePotentialLeakSourcePageUseCase:
                     potential_source_page.url,
                     search_query,
                     potential_source_page.source,
-                    json.dumps(potential_source_page.context),
-                    json.dumps(result["iol"]),
+                    potential_source_page.context,
+                    result["iol"],
                     False,
                     potential_source_page.last_modified,
                 )
@@ -127,7 +127,7 @@ class SavePotentialLeakSourcePageUseCase:
                 self.leak_service.update_leak(
                     non_acknowledged_leaks[0].leak_id,
                     # Is it correct to assume that there'll always be only one IOL per PLS result?
-                    IOL=result["iol"][0],
+                    iol=result["iol"][0],
                     context=potential_source_page.context,
                     last_modified=potential_source_page.last_modified,
                 )
@@ -140,8 +140,8 @@ class SavePotentialLeakSourcePageUseCase:
                         potential_source_page.url,
                         search_query,
                         potential_source_page.source,
-                        json.dumps(potential_source_page.context),
-                        json.dumps(result["iol"]),
+                        potential_source_page.context,
+                        result["iol"],
                         False,
                         potential_source_page.last_modified,
                     )

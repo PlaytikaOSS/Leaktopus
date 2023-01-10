@@ -185,7 +185,7 @@ def test_should_save_potential_leak_source_page_with_multiple_iols_support(
     assert len(saved_leaks) == 2
 
     # Assert the first leak has two IOLs.
-    assert len(saved_leaks[0].IOL) == 2
+    assert len(saved_leaks[0].iol) == 2
 
     assert_leak_context_is_updated_with_success(saved_leaks)
 
