@@ -5,6 +5,7 @@ import re
 import json
 import leaktopus.common.db_handler as dbh
 from leaktopus.app import create_celery_app
+from leaktopus.exceptions.scans import ScanHasNoResults
 from loguru import logger
 
 celery = create_celery_app()
@@ -214,17 +215,49 @@ def github_fetch_pages(struct, scan_id, organization_domains):
     while result_group.waiting():
         continue
 
+    if os.environ.get('USE_EXPERIMENTAL_SHOW_PARTIAL_RESULTS_EVEN_IF_TASK_FAILS', False):
+        logger.info(
+            "Using experimental show partial results even if task fails.")
+        with allow_join_result():
+            pr = show_partial_results(result_group, struct["search_query"], organization_domains)
+            if not pr:
+                raise ScanHasNoResults("All results including partial were filtered")
+
+            return pr
+
+    # @todo Remove the following lines when the experimental flag will be part of the core.
     # Celery flag to allow join
     with allow_join_result():
         if result_group.successful():
             # Gather results to list
             results_group_list = result_group.join()
             merged_pages = merge_pages(results_group_list)
-            gh_results_filtered = filter_gh_results(merged_pages, organization_domains)
+            gh_results_filtered = filter_gh_results(
+                merged_pages, organization_domains)
             return save_gh_leaks(gh_results_filtered, struct["search_query"], organization_domains)
         else:
-            logger.error('There was an error in getting at least one of the github result pages.')
+            logger.error(
+                'There was an error in getting at least one of the github result pages.')
             return []
+
+
+def show_partial_results(result_group, search_query, organization_domains):
+    grouped_results = []
+    for result in result_group:
+        try:
+            rg = result.get()
+            results_group_list = [rg]
+            merged_pages = merge_pages(results_group_list)
+            gh_results_filtered = filter_gh_results(
+                merged_pages, organization_domains)
+            grouped_results += save_gh_leaks(gh_results_filtered,
+                                             search_query, organization_domains)
+        except ScanHasNoResults as e:
+            logger.info("Scan has no results: {}".format(e))
+        except Exception as e:
+            logger.error(
+                'There was an error in getting at least one of the github result pages. Task: {}. Error: {}', result, e)
+    return grouped_results
 
 
 @celery.task(bind=True, max_retries=200)
@@ -311,7 +344,7 @@ def error_handler(request, exc, traceback, scan_id):
         scans.update_scan_status(scan_id, ScanStatus.SCAN_FAILED)
 
 
-def scan(search_query, organization_domains=[], sensitive_keywords=[]):
+def scan(search_query, organization_domains=[], sensitive_keywords=[], enhancement_modules=[]):
     from leaktopus.common.github_indexer import github_index_commits
     from leaktopus.common.leak_enhancer import leak_enhancer
     import leaktopus.common.scans as scans
@@ -330,7 +363,8 @@ def scan(search_query, organization_domains=[], sensitive_keywords=[]):
         leak_enhancer.s(
             scan_id=scan_id,
             organization_domains=organization_domains,
-            sensitive_keywords=sensitive_keywords
+            sensitive_keywords=sensitive_keywords,
+            enhancement_modules=enhancement_modules
         ) |\
         github_index_commits.s(scan_id=scan_id) |\
         update_scan_status_async.s(scan_id=scan_id)

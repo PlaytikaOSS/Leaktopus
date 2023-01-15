@@ -27,10 +27,18 @@ def is_repo_max_size_exceeded(repo_name):
     return True
 
 
+def get_enhancement_modules():
+    return [
+        "domains",
+        "sensitive_keywords",
+        "contributors",
+        "secrets"
+    ]
+
+
 @celery.task(bind=True, max_retries=ANALYSIS_MAX_RETRIES)
-def enhance_repo(self, repo_name, scan_id, clones_base_dir, organization_domains, sensitive_keywords):
+def enhance_repo(self, repo_name, organization_domains, sensitive_keywords, enhancement_modules):
     import datetime
-    import leaktopus.common.scans as scans
     from leaktopus.common.secrets_scanner import scan as secrets_scan
     from leaktopus.common.domains_scanner import scan as domains_scan
     from leaktopus.common.contributors_extractor import scan as contributors_extractor
@@ -38,15 +46,7 @@ def enhance_repo(self, repo_name, scan_id, clones_base_dir, organization_domains
 
     logger.info("Starting analysis of {}", repo_name)
 
-    # Check if the scan should be aborted.
-    if scans.is_scan_aborting(scan_id):
-        logger.info("Aborting scan {}", scan_id)
-        return True
-
-    if is_repo_max_size_exceeded(repo_name):
-        logger.info("Skipped {} since max size exceeded", repo_name)
-        return True
-
+    clones_base_dir = os.environ.get('CLONES_DIR', '/tmp/leaktopus-clones/')
     ts = datetime.datetime.now().timestamp()
     repo_path = "https://github.com/" + repo_name + ".git"
     clone_dir = os.path.join(clones_base_dir, str(ts), repo_name.replace("/", "_"))
@@ -63,10 +63,18 @@ def enhance_repo(self, repo_name, scan_id, clones_base_dir, organization_domains
         full_diff_dir = os.path.join(clone_dir, 'commits_data')
 
         logger.debug("Starting the enrichment tasks for {}", repo_path)
-        domains_scan(repo_path, full_diff_dir, organization_domains)
-        sensitive_keywords_extractor(repo_path, full_diff_dir, sensitive_keywords)
-        contributors_extractor(repo_path, full_diff_dir, organization_domains)
-        secrets_scan(repo_path, full_diff_dir)
+
+        if "domains" in enhancement_modules:
+            domains_scan(repo_path, full_diff_dir, organization_domains)
+
+        if "sensitive_keywords" in enhancement_modules:
+            sensitive_keywords_extractor(repo_path, full_diff_dir, sensitive_keywords)
+
+        if "contributors" in enhancement_modules:
+            contributors_extractor(repo_path, full_diff_dir, organization_domains)
+
+        if "secrets" in enhancement_modules:
+            secrets_scan(repo_path, full_diff_dir)
     except Exception as e:
         logger.error("Exception raised on the analysis of {}, it would be retried soon. Exception: {}", repo_name, e)
 
@@ -82,8 +90,24 @@ def enhance_repo(self, repo_name, scan_id, clones_base_dir, organization_domains
     logger.info("Completed the analysis of {}", repo_name)
 
 
+@celery.task(bind=True, max_retries=ANALYSIS_MAX_RETRIES)
+def enhance_scanned_repo(self, repo_name, scan_id, organization_domains, sensitive_keywords, enhancement_modules):
+    import leaktopus.common.scans as scans
+
+    # Check if the scan should be aborted.
+    if scans.is_scan_aborting(scan_id):
+        logger.info("Aborting scan {}", scan_id)
+        return True
+
+    if is_repo_max_size_exceeded(repo_name):
+        logger.info("Skipped {} since max size exceeded", repo_name)
+        return True
+
+    enhance_repo(repo_name, organization_domains, sensitive_keywords, enhancement_modules)
+
+
 @celery.task
-def leak_enhancer(repos_full_names, scan_id, organization_domains=[], sensitive_keywords=[]):
+def leak_enhancer(repos_full_names, scan_id, organization_domains=[], sensitive_keywords=[], enhancement_modules=[]):
     from celery import group
     import leaktopus.common.scans as scans
     from leaktopus.models.scan_status import ScanStatus
@@ -99,17 +123,20 @@ def leak_enhancer(repos_full_names, scan_id, organization_domains=[], sensitive_
     # Update the status, since aborting wasn't requested.
     scans.update_scan_status(scan_id, ScanStatus.SCAN_ANALYZING)
 
-    clones_base_dir = os.environ.get('CLONES_DIR', '/tmp/leaktopus-clones/')
+    # Skip the step if no enhancement modules were provided.
+    if not enhancement_modules:
+        logger.info('Skipped enhancement for scan #{} (no enhancement modules were provided).', scan_id)
+        return repos_full_names
 
     enhance_tasks = []
     for repo_name in repos_full_names:
         # Create the group of enhancement tasks, one per repository.
-        enhance_tasks.append(enhance_repo.s(
+        enhance_tasks.append(enhance_scanned_repo.s(
                 repo_name=repo_name,
                 scan_id=scan_id,
-                clones_base_dir=clones_base_dir,
                 organization_domains=organization_domains,
-                sensitive_keywords=sensitive_keywords)
+                sensitive_keywords=sensitive_keywords,
+                enhancement_modules=enhancement_modules)
         )
 
     # Run the enhance in async

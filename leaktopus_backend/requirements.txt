@@ -7,7 +7,8 @@ flask_debugtoolbar==0.11.0
 # flask_mail==0.9.1
 # flask_static_digest==0.2.1
 # flask_wtf==0.14.3
-pymsteams==0.2.1
+pymsteams==0.2.2
+slack_sdk==3.19.5
 Flask-Cors==3.0.10
 
 # Application server for both development and production.
@@ -31,3 +32,6 @@ pyjwt>=2.4.0 # not directly required, pinned to avoid a vulnerability
 # Documentation libs
 flasgger==0.9.5
 pyyaml==6.0
+
+# Tests
+pytest==7.1.2

@@ -4,7 +4,7 @@ import leaktopus.common.db_handler as dbh
 def db_install_sensitive_keywords(db):
     cursor = db.cursor()
     cursor.execute('''
-            CREATE TABLE sensitive_keywords(
+            CREATE TABLE if not exists sensitive_keywords(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 leak_id INTEGER,
                 keyword TEXT,

@@ -47,7 +47,8 @@ Based on the **Code C.A.I.N** framework:
   - **Built-in ELK** to search for data in leaks (including full index of Git repositories with IOLs).
   - **Notify on new leaks**
     - MS Teams Webhook.
-    - Cortex XSOAR® (by Palo Alto Networks) Integration _(Coming soon)_.
+    - Slack Bot.
+    - Cortex XSOAR® (by Palo Alto Networks) Integration _(WIP)_.
 
 ## Technology Stack
 - Fully Dockerized.
