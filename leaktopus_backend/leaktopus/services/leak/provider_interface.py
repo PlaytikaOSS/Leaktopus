@@ -27,5 +27,9 @@ class LeakProviderInterface(Protocol):
         pass
 
     @abstractmethod
+    def update_iol(self, leak_id, iol):
+        pass
+
+    @abstractmethod
     def delete_leak_by_url(self, url, **kwargs):
         pass

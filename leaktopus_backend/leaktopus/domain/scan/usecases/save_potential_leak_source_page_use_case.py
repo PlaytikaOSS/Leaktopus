@@ -123,11 +123,13 @@ class SavePotentialLeakSourcePageUseCase:
 
             non_acknowledged_leaks = self.get_non_acknowledged_leaks(existing_leaks)
             if non_acknowledged_leaks:
+                leak_id = non_acknowledged_leaks[0].leak_id
+                # Is it correct to assume that there'll always be only one IOL per PLS result?
+                self.leak_service.update_iol(leak_id, result["iol"][0])
+
                 # Update leak IOLs and context.
                 self.leak_service.update_leak(
-                    non_acknowledged_leaks[0].leak_id,
-                    # Is it correct to assume that there'll always be only one IOL per PLS result?
-                    iol=result["iol"][0],
+                    leak_id,
                     context=potential_source_page.context,
                     last_modified=potential_source_page.last_modified,
                 )

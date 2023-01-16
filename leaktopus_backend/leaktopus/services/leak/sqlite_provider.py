@@ -1,3 +1,5 @@
+import json
+
 from leaktopus.services.leak.provider_interface import (
     LeakProviderInterface,
 )
@@ -11,13 +13,17 @@ class LeakSqliteProvider(LeakProviderInterface):
     def __init__(self, options):
         self.db = options["db"]
 
-    def fix_names_difference_between_db_and_entity(self, args):
+    def fix_name_and_types_difference_between_db_and_entity(self, args):
         new_args = {}
         for key in args.keys():
             if key == "leak_id":
                 new_args["pid"] = args.get(key)
             elif key == "type":
                 new_args["leak_type"] = args.get(key)
+            elif key == "iol":
+                new_args["leaks"] = json.dumps(args.get(key))
+            elif key == "context":
+                new_args["context"] = json.dumps(args.get(key))
             else:
                 new_args[key] = args.get(key)
 
@@ -27,7 +33,7 @@ class LeakSqliteProvider(LeakProviderInterface):
     def get_leaks(self, **kwargs) -> list[Leak]:
         sql_cond = []
         sql_vars = ()
-        filter_args = self.fix_names_difference_between_db_and_entity(kwargs)
+        filter_args = self.fix_name_and_types_difference_between_db_and_entity(kwargs)
         for col in filter_args.keys():
             sql_vars = (*sql_vars, filter_args[col])
             sql_cond.append(col)
@@ -44,14 +50,17 @@ class LeakSqliteProvider(LeakProviderInterface):
         leaks_res = res.fetchall()
         return self.to_entity(leaks_res)
 
-    def add_leak(self, url, search_query, leak_type, context, leaks, acknowledged, last_modified, **kwargs):
+    def add_leak(self, url, search_query, leak_type, context, iol, acknowledged, last_modified, **kwargs):
         # Insert or ignore if already exists.
         try:
+            iol_str = json.dumps(iol)
+            context_str = json.dumps(context)
+
             c = self.db.cursor()
             c.execute('''
                 INSERT OR IGNORE INTO leak(url, search_query, leak_type, context, leaks, acknowledged, last_modified)
                     VALUES(?,?,?,?,?,?,?)
-                ''', (url, search_query, leak_type, context, leaks, acknowledged, last_modified,))
+                ''', (url, search_query, leak_type, context_str, iol_str, acknowledged, last_modified,))
             self.db.commit()
 
             return get_last_id(self.db, "leak", c.lastrowid, "pid")
@@ -64,22 +73,25 @@ class LeakSqliteProvider(LeakProviderInterface):
             raise LeakException("Could not add leak")
 
     def update_leak(self, leak_id, **kwargs):
+        prop_args = self.fix_name_and_types_difference_between_db_and_entity(kwargs)
         # @todo Find a prettier way to do the dynamic update.
-        for col in kwargs.keys():
+        for col in prop_args.keys():
             col_sql = col + "=?"
-            self.db.cursor().execute("UPDATE leak SET " + col_sql + " WHERE pid=?", (kwargs[col], leak_id,))
+            value = prop_args[col]
+
+            self.db.cursor().execute("UPDATE leak SET " + col_sql + " WHERE pid=?", (value, leak_id,))
+        self.db.commit()
+
+    def update_iol(self, leak_id, iol):
+        iol_str = json.dumps(iol)
+        self.db.cursor().execute(
+            '''UPDATE leak SET leaks = CASE WHEN NOT EXISTS (SELECT 1 FROM json_each(leaks) WHERE value = json(?)) THEN json_insert(leaks, "$[#]", json(?)) ELSE leaks END WHERE pid = ?''',
+            (iol_str, iol_str, leak_id))
         self.db.commit()
 
     def delete_leak_by_url(self, url, **kwargs):
         c = self.db.cursor()
-
         c.execute('''DELETE FROM leak WHERE url REGEXP ?''', (url,))
-        # @todo Get the leak id and delete by it.
-        c.execute('''DELETE FROM secret WHERE url REGEXP ?''', (url,))
-        c.execute('''DELETE FROM domain WHERE url REGEXP ?''', (url,))
-        # c.execute('''DELETE FROM contributors WHERE url REGEXP ?''', (url,))
-        # c.execute('''DELETE FROM sensitive_keywords WHERE url REGEXP ?''', (url,))
-
         self.db.commit()
 
     def to_entity(self, rows):
@@ -90,8 +102,8 @@ class LeakSqliteProvider(LeakProviderInterface):
                 row["url"],
                 row["search_query"],
                 row["leak_type"],
-                row["context"],
-                row["leaks"],
+                json.loads(row["context"]),
+                json.loads(row["leaks"]),
                 row["acknowledged"],
                 row["last_modified"],
                 row["created_at"]

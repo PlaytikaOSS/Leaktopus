@@ -27,10 +27,17 @@ from leaktopus.tasks.clients.memory_client import MemoryClient
 from leaktopus.tasks.task_manager import TaskManager
 
 
-@pytest.fixture(name="app")
+@pytest.fixture()
 def app():
     task_manager = TaskManager(MemoryClient(override_tasks={"run_task": lambda: None}))
     app = create_app(task_manager=task_manager, settings_override={"TESTING": True})
+    yield app
+
+
+@pytest.fixture()
+def app_db():
+    task_manager = TaskManager(MemoryClient(override_tasks={"run_task": lambda: None}))
+    app = create_app(task_manager=task_manager, settings_override={"TESTING": True, "DATABASE_PATH": ":memory:"})
     yield app
 
 
@@ -59,9 +66,9 @@ def add_leak():
         "https://leakexample.com",
         "leaktopus-integration-test",
         "github",
-        "",
+        {},
         # Has two IOLs.
-        '[{"file_name": "index.html", "file_url": "https://github.com/PlaytikaOSS/Leaktopus/blob/1234567/index.html", "org_emails": []}, {"file_name": "index.htm", "file_url": "https://github.com/PlaytikaOSS/Leaktopus/blob/1234567/index.htm", "org_emails": []}]',
+        [{"file_name": "index.html", "file_url": "https://github.com/PlaytikaOSS/Leaktopus/blob/1234567/index.html", "org_emails": []}, {"file_name": "index.htm", "file_url": "https://github.com/PlaytikaOSS/Leaktopus/blob/1234567/index.htm", "org_emails": []}],
         False,
         "2000-01-01 00:00:00"
     )
