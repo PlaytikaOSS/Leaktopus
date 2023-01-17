@@ -199,6 +199,7 @@ def test_should_save_potential_leak_source_page_with_multiple_iols_support(
     )
 
 
+@pytest.mark.skip(reason="TBC")
 def test_should_raise_exception_when_multiple_non_acknowledged_leaks_matched_for_save(
         factory_leak_service,
         ignore_pattern_provider_mock,
@@ -206,7 +207,7 @@ def test_should_raise_exception_when_multiple_non_acknowledged_leaks_matched_for
         page_results,
         potential_leak_source_scan_status_provider_mock,
 ):
-    pass
+    assert False
 
 
 def test_should_support_multiple_search_queries(
