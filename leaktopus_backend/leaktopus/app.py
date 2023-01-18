@@ -61,7 +61,6 @@ def create_app(settings_override=None, task_manager=None):
         app.config.update(settings_override)
 
     app.teardown_appcontext(close_connection)
-    # "/tmp/leaktopus.sqlite"
 
     if task_manager is None:
         with app.app_context():

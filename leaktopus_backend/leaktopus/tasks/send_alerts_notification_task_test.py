@@ -1,4 +1,3 @@
-from leaktopus.services.leak.leak_service import LeakService
 from leaktopus.tasks.send_alerts_notification_task import SendAlertsNotificationTask
 
 

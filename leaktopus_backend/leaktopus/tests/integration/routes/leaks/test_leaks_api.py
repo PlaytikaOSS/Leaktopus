@@ -40,4 +40,4 @@ def test_get_leak_by_id_with_success(
         assert leak_response.json["data"][0]["type"] == "github"
         assert len(leak_response.json["data"]) > 0
         assert len(leak_response.json["data"][0]["context"]) > 0
-        assert len(leak_response.json["data"][0]["IOL"]) > 0
+        assert len(leak_response.json["data"][0]["iol"]) > 0

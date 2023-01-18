@@ -3,13 +3,12 @@ from leaktopus.factory import (
     create_alert_service,
     create_notification_service,
 )
-from leaktopus.services.leak.leak_service import LeakService
+
 from leaktopus.tasks.send_alerts_notification_task import SendAlertsNotificationTask
 
 
-def test_send_alerts_notification_task_endpoint_with_success(
+def test_send_alerts_notification_task_entrypoint_with_success(
     app,
-    client,
     add_leak
 ):
     # Add leaks
