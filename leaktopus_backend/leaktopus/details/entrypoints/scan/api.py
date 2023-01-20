@@ -33,14 +33,14 @@ def start_scan():
     if not q:
         abort(422)
 
-    # Scan (in an async way with Celery)
     import leaktopus.common.scanner_async as scanner
+    import leaktopus.common.scans as scans
 
-    scan_id = scanner.scan(q)
-
-    # Get the new scan's information.
     try:
-        import leaktopus.common.scans as scans
+        # Scan (in an async way with Celery)
+        scan_id = scanner.scan(q)
+
+        # Get the new scan's information.
 
         scan = scans.get_scans(scan_id=scan_id)
     except Exception as e:

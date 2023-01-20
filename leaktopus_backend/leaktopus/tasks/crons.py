@@ -2,12 +2,10 @@ from leaktopus.utils.common_imports import logger
 from leaktopus.details.entrypoints.alerts.task import (
     send_alerts_notification_task_entrypoint,
 )
-from leaktopus.app import create_celery_app
-
-celery = create_celery_app()
+from celery import shared_task
 
 
-@celery.task()
+@shared_task()
 def cron_send_alerts_notification_task_entrypoint():
     logger.info(
         "Cron task is now running: cron_send_alerts_notification_task_entrypoint."

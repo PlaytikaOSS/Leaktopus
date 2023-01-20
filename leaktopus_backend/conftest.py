@@ -1,6 +1,8 @@
+import os
+
 import pytest
 
-from leaktopus.app import create_app
+from leaktopus.app import create_app, create_celery_app
 from leaktopus.domain.extractors.domain_extractor import DomainExtractor
 from leaktopus.domain.extractors.email_extractor import EmailExtractor
 from leaktopus.services.alert.alert_service import AlertService
@@ -30,21 +32,48 @@ from leaktopus.tasks.task_manager import TaskManager
 @pytest.fixture()
 def app():
     task_manager = TaskManager(MemoryClient(override_tasks={"run_task": lambda: None}))
-    app = create_app(task_manager=task_manager, settings_override={"TESTING": True})
+    app = create_app(task_manager=task_manager, settings_override={
+        "TESTING": True,
+        "USE_EXPERIMENTAL_REFACTORING": True
+    })
     yield app
 
 
 @pytest.fixture()
 def app_db():
     task_manager = TaskManager(MemoryClient(override_tasks={"run_task": lambda: None}))
-    app = create_app(task_manager=task_manager, settings_override={"TESTING": True, "DATABASE_PATH": ":memory:"})
+    app = create_app(task_manager=task_manager, settings_override={
+        "TESTING": True,
+        "DATABASE_PATH": ":memory:",
+        "USE_EXPERIMENTAL_REFACTORING": True
+    })
     yield app
+
+
+@pytest.fixture()
+def app_celery_db():
+    DB_PATH = "/tmp/leaktopus.sqlite"
+    task_manager = TaskManager(MemoryClient(override_tasks={"run_task": lambda: None}))
+    app = create_app(task_manager=task_manager, settings_override={
+        "TESTING": True,
+        # "USE_EXPERIMENTAL_REFACTORING": True,
+        "DATABASE_PATH": DB_PATH,
+        "CELERY_CONFIG": {
+            "task_always_eager": True,
+            "task_ignore_result": True,
+            "task_eager_propagates": True
+        }
+    })
+
+    yield app
+
+    os.remove(DB_PATH)
 
 
 # https://github.com/pytest-dev/pytest-flask/issues/69#issuecomment-455828955
 @pytest.fixture()
-def client(app):
-    with app.test_client() as client:
+def client(app_celery_db):
+    with app_celery_db.test_client() as client:
         yield client
 
 
@@ -68,7 +97,10 @@ def add_leak():
         "github",
         {},
         # Has two IOLs.
-        [{"file_name": "index.html", "file_url": "https://github.com/PlaytikaOSS/Leaktopus/blob/1234567/index.html", "org_emails": []}, {"file_name": "index.htm", "file_url": "https://github.com/PlaytikaOSS/Leaktopus/blob/1234567/index.htm", "org_emails": []}],
+        [{"file_name": "index.html", "file_url": "https://github.com/PlaytikaOSS/Leaktopus/blob/1234567/index.html",
+          "org_emails": []},
+         {"file_name": "index.htm", "file_url": "https://github.com/PlaytikaOSS/Leaktopus/blob/1234567/index.htm",
+          "org_emails": []}],
         False,
         "2000-01-01 00:00:00"
     )

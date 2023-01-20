@@ -1,17 +1,19 @@
 from flask import url_for
 import time
 
+from leaktopus.models.scan_status import ScanStatus
+
 
 def test_start_scan_ends_with_correct_scan_status_with_success(
-        app,
+        app_celery_db,
         client,
 ):
-    with app.app_context():
+    with app_celery_db.app_context():
 
         scan_response = client.get(
             url_for(
                 "scans_api.start_scan",
-                q="leaktopus"
+                q="Leaktopus Integration"
             ),
         )
 
@@ -19,8 +21,8 @@ def test_start_scan_ends_with_correct_scan_status_with_success(
 
         scan_status = -1
 
-        # while not scan_response.json.
-        while scan_status < 3:
+        # while scan is still in progress.
+        while scan_status < ScanStatus.SCAN_DONE.value:
             scan_status_response = client.get(
                 url_for(
                     "scans_api.get_scan_status",
@@ -30,14 +32,14 @@ def test_start_scan_ends_with_correct_scan_status_with_success(
             scan_status = scan_response.json["results"][0]["status"]
             time.sleep(2)
 
-        assert scan_status == 4
+        assert scan_status == ScanStatus.SCAN_DONE.value
 
 
 def test_start_scan_graceful_failure_when_query_has_no_matches(
-        app,
+        app_celery_db,
         client,
 ):
-    with app.app_context():
+    with app_celery_db.app_context():
 
         scan_response = client.get(
             url_for(
@@ -50,8 +52,8 @@ def test_start_scan_graceful_failure_when_query_has_no_matches(
 
         scan_status = -1
 
-        # while not scan_response.json.
-        while scan_status < 3:
+        # while scan is still in progress.
+        while scan_status < ScanStatus.SCAN_DONE.value:
             scan_status_response = client.get(
                 url_for(
                     "scans_api.get_scan_status",
@@ -61,4 +63,4 @@ def test_start_scan_graceful_failure_when_query_has_no_matches(
             scan_status = scan_response.json["results"][0]["status"]
             time.sleep(2)
 
-        assert scan_status == 4
+        assert scan_status == ScanStatus.SCAN_DONE.value

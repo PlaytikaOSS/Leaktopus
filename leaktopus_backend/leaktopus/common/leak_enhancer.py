@@ -1,3 +1,4 @@
+from celery import shared_task
 import os
 import shutil
 from git.repo.base import Repo
@@ -6,7 +7,6 @@ from loguru import logger
 
 from leaktopus.app import create_celery_app
 
-celery = create_celery_app()
 # How many times to retry the analysis task before failing.
 ANALYSIS_MAX_RETRIES = 10
 # Interval between analysis task retry.
@@ -36,7 +36,7 @@ def get_enhancement_modules():
     ]
 
 
-@celery.task(bind=True, max_retries=ANALYSIS_MAX_RETRIES)
+@shared_task(bind=True, max_retries=ANALYSIS_MAX_RETRIES)
 def enhance_repo(self, repo_name, organization_domains, sensitive_keywords, enhancement_modules):
     import datetime
     from leaktopus.common.secrets_scanner import scan as secrets_scan
@@ -90,7 +90,7 @@ def enhance_repo(self, repo_name, organization_domains, sensitive_keywords, enha
     logger.info("Completed the analysis of {}", repo_name)
 
 
-@celery.task(bind=True, max_retries=ANALYSIS_MAX_RETRIES)
+@shared_task(bind=True, max_retries=ANALYSIS_MAX_RETRIES)
 def enhance_scanned_repo(self, repo_name, scan_id, organization_domains, sensitive_keywords, enhancement_modules):
     import leaktopus.common.scans as scans
 
@@ -106,7 +106,7 @@ def enhance_scanned_repo(self, repo_name, scan_id, organization_domains, sensiti
     enhance_repo(repo_name, organization_domains, sensitive_keywords, enhancement_modules)
 
 
-@celery.task
+@shared_task()
 def leak_enhancer(repos_full_names, scan_id, organization_domains=[], sensitive_keywords=[], enhancement_modules=[]):
     from celery import group
     import leaktopus.common.scans as scans

@@ -14,7 +14,7 @@ from leaktopus.tasks.clients.celery_client import CeleryClient
 from flasgger import Swagger
 
 
-def create_celery_app(app=None):
+def create_celery_app(app):
     """
     Create a new Celery object and tie together the Celery config to the app's
     config. Wrap all tasks in the context of the application.
@@ -22,7 +22,6 @@ def create_celery_app(app=None):
     :param app: Flask app
     :return: Celery app
     """
-    app = app or create_app()
     celery = Celery(app.import_name)
 
     celery_config = app.config.get("CELERY_CONFIG", {})
@@ -76,6 +75,8 @@ def create_app(settings_override=None, task_manager=None):
     if app.debug:
         app.wsgi_app = DebuggedApplication(app.wsgi_app, evalex=True)
 
+    create_celery_app(app)
+
     return app
 
 
@@ -101,6 +102,3 @@ def extensions(app):
     # flask_static_digest.init_app(app)
 
     return None
-
-
-celery_app = create_celery_app()
