@@ -57,7 +57,11 @@ def create_app(settings_override=None, task_manager=None):
 
     app.config.from_object("config.settings")
     if settings_override:
+        # Update CELERY_CONFIG settings since .update doesn't work recursively.
+        celery_config = app.config.get("CELERY_CONFIG", {})
+        celery_config.update(settings_override.get("CELERY_CONFIG", {}))
         app.config.update(settings_override)
+        app.config["CELERY_CONFIG"] = celery_config
 
     app.teardown_appcontext(close_connection)
 

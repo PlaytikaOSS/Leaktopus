@@ -56,7 +56,7 @@ def app_celery_db():
     task_manager = TaskManager(MemoryClient(override_tasks={"run_task": lambda: None}))
     app = create_app(task_manager=task_manager, settings_override={
         "TESTING": True,
-        # "USE_EXPERIMENTAL_REFACTORING": True,
+        "USE_EXPERIMENTAL_REFACTORING": True,
         "DATABASE_PATH": DB_PATH,
         "CELERY_CONFIG": {
             "task_always_eager": True,

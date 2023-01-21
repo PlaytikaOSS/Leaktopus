@@ -229,10 +229,7 @@ def create_potential_leak_source_page_results_fetcher(
 
 def create_search_results_dispatcher(dispatcher_type):
     if dispatcher_type == "celery":
-        from leaktopus.app import create_celery_app
-
-        client = create_celery_app()
-        return CelerySearchResultsDispatcher(client=client)
+        return CelerySearchResultsDispatcher()
 
 
 def create_potential_leak_source_filter(
