@@ -49,6 +49,26 @@ import dotenv
 dotenv.load_dotenv('./.env')
 ```
 
+### Automated Tests
+Leaktopus has a set of automated tests.
+
+#### Unit-tests
+  - Executed on every push to the repository.
+  - Can be run manually via your IDE or using `pytest`.
+
+#### Integration-tests
+  - Are **not** executed automatically on every push to the repository.
+  - Can be run manually via your IDE or using `pytest`, but note that some environment variables might be required for the execution.
+
+#### E2E-tests
+  - Are **not** executed automatically on every push to the repository.
+  - Using a dummy Github repository for the tests.
+  - Requires a full environment to run, therefore recommended to be executed from the "worker" docker container:
+
+    ```bash
+    docker-compose -f docker-compose.dev.yml exec worker pytest leaktopus/tests/e2e
+    ```
+
 #### Frontend
 ```bash
 cd leaktopus_frontend
