@@ -1,4 +1,4 @@
-from celery import Celery, group
+from celery import Celery, group, shared_task
 from loguru import logger
 
 from leaktopus.domain.scan.contracts.search_results_dispatcher_interface import (
@@ -10,8 +10,6 @@ from leaktopus.details.scan.potential_leak_source_request import (
 
 
 class CelerySearchResultsDispatcher(SearchResultsDispatcherInterface):
-    def __init__(self, client: Celery):
-        self.client = client
 
     def dispatch(
         self,

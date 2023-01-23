@@ -15,6 +15,7 @@ from leaktopus.domain.scan.entities.potential_leak_source import PotentialLeakSo
 from leaktopus.domain.scan.contracts.potential_leak_source_filter_interface import (
     PotentialLeakSourceFilterInterface,
 )
+from leaktopus.utils.common_imports import logger
 
 
 class AbstractPotentialLeakSourceFilter(PotentialLeakSourceFilterInterface):
@@ -34,22 +35,29 @@ class AbstractPotentialLeakSourceFilter(PotentialLeakSourceFilterInterface):
 
     def filter(self, scan_id, potential_leak_source: PotentialLeakSource):
         if self.is_ignored_repo(potential_leak_source.url):
+            logger.debug(f"Repository {potential_leak_source.url} is ignored")
             return False
 
-        if not self.is_repo_requires_scan(potential_leak_source):
-            return False
+        # @todo Only check it in the enhance phase to save resources.
+        # if not self.is_repo_requires_scan(potential_leak_source):
+        #     logger.debug(f"Repository {potential_leak_source.url} doesn't require scan")
+        #     return False
 
         if self.fork_count_is_too_high(potential_leak_source):
+            logger.debug(f"Repository {potential_leak_source.url} has too many forks")
             return False
 
         if self.star_count_is_too_high(potential_leak_source):
+            logger.debug(f"Repository {potential_leak_source.url} has too many stars")
             return False
 
         content = potential_leak_source.content
         if self.too_many_non_org_emails(content):
+            logger.debug(f"Repository {potential_leak_source.url} has too many non-org emails")
             return False
 
         if self.too_many_domains(content):
+            logger.debug(f"Repository {potential_leak_source.url} has too many domains")
             return False
 
         return True
@@ -65,15 +73,15 @@ class AbstractPotentialLeakSourceFilter(PotentialLeakSourceFilterInterface):
 
         return False
 
-    def is_repo_requires_scan(self, potential_leak_source):
-        leaks = self.leak_service.get_leaks(url=potential_leak_source.url)
-        if self.leak_not_scanned(leaks):
-            return True
-
-        if self.repository_was_updated_since_last_scan(potential_leak_source, leaks[0]):
-            return True
-
-        return False
+    # def is_repo_requires_scan(self, potential_leak_source: PotentialLeakSource):
+    #     leaks = self.leak_service.get_leaks(url=potential_leak_source.url)
+    #     if self.leak_not_scanned(leaks):
+    #         return True
+    #
+    #     if self.repository_was_updated_since_last_scan(potential_leak_source, leaks[0]):
+    #         return True
+    #
+    #     return False
 
     def leak_not_scanned(self, leaks):
         return not leaks

@@ -18,7 +18,8 @@ from loguru import logger
 from leaktopus.details.scan.potential_leak_source_request import (
     PotentialLeakSourceRequest,
 )
-
+import leaktopus.common.scans as scans
+from leaktopus.models.scan_status import ScanStatus
 
 # Filters definitions
 # @todo Migrate to a configuration table.
@@ -184,7 +185,7 @@ def github_get_num_of_pages(results):
 def github_preprocessor(self, search_query, scan_id):
     from leaktopus.exceptions.scans import ScanHasNoResults
 
-    # Authenticates to github, get results object, get number of pages the object has
+    # Authenticates to Github, get results object, get number of pages the object has
     try:
         g = github_authenticate()
         if not g:
@@ -378,20 +379,21 @@ def update_scan_status_async(repos_full_names, scan_id):
         scans.update_scan_status(scan_id, ScanStatus.SCAN_FAILED)
 
 
-@shared_task
-def error_handler(request, exc, traceback, scan_id):
-    from leaktopus.exceptions.scans import ScanHasNoResults
-
-    logger.error("Task {} raised exception: {}", request.id, exc)
-
-    import leaktopus.common.scans as scans
-    from leaktopus.models.scan_status import ScanStatus
-
-    if isinstance(exc, ScanHasNoResults):
-        # In case of no results exception - change the status to done.
+def update_scan_status_on_exception(e, scan_id):
+    if isinstance(e, ScanHasNoResults):
+        logger.info("Scan {} has no results: {}", scan_id, e)
         scans.update_scan_status(scan_id, ScanStatus.SCAN_DONE)
     else:
+        logger.error("Error in scan {}: {}", scan_id, e)
         scans.update_scan_status(scan_id, ScanStatus.SCAN_FAILED)
+
+
+@shared_task
+def error_handler(request, e, traceback, scan_id):
+    if not isinstance(e, ScanHasNoResults):
+        logger.error("Task {} raised exception: {}", request.id, e)
+
+    update_scan_status_on_exception(e, scan_id)
 
 
 def scan(
@@ -409,37 +411,41 @@ def scan(
 
     # Add the scan to DB.
     scan_id = scans.add_scan(search_query)
-    if current_app.config["USE_EXPERIMENTAL_REFACTORING"]:
-        logger.info("Using experimental refactoring")
-        potential_leak_source_request = PotentialLeakSourceRequest(
-            scan_id=scan_id,
-            search_query=search_query,
-            organization_domains=organization_domains,
-            sensitive_keywords=sensitive_keywords,
-            enhancement_modules=enhancement_modules,
-            provider_type="github",
-        )
-        chain = github_preprocessor.s(
-            search_query=search_query, scan_id=scan_id
-        ) | trigger_pages_scan_task_entrypoint.s(potential_leak_source_request, "celery")
-        chain.apply_async(link_error=error_handler.s(scan_id=scan_id))
-    else:
-        chain = (
-            github_preprocessor.s(search_query=search_query, scan_id=scan_id)
-            | github_fetch_pages.s(
-                scan_id=scan_id, organization_domains=organization_domains
-            )
-            | gh_get_repos_full_names.s()
-            | leak_enhancer.s(
+    try:
+        if current_app.config["USE_EXPERIMENTAL_REFACTORING"]:
+            logger.info("Using experimental refactoring")
+            potential_leak_source_request = PotentialLeakSourceRequest(
                 scan_id=scan_id,
+                search_query=search_query,
                 organization_domains=organization_domains,
                 sensitive_keywords=sensitive_keywords,
                 enhancement_modules=enhancement_modules,
+                provider_type="github",
             )
-            | github_index_commits.s(scan_id=scan_id)
-            | update_scan_status_async.s(scan_id=scan_id)
-        )
-        chain.apply_async(link_error=error_handler.s(scan_id=scan_id))
+            chain = github_preprocessor.s(
+                search_query=search_query, scan_id=scan_id
+            ) | trigger_pages_scan_task_entrypoint.s(potential_leak_source_request, "celery")
+            chain.apply_async(link_error=error_handler.s(scan_id=scan_id))
+        else:
+            chain = (
+                github_preprocessor.s(search_query=search_query, scan_id=scan_id)
+                | github_fetch_pages.s(
+                    scan_id=scan_id, organization_domains=organization_domains
+                )
+                | gh_get_repos_full_names.s()
+                | leak_enhancer.s(
+                    scan_id=scan_id,
+                    organization_domains=organization_domains,
+                    sensitive_keywords=sensitive_keywords,
+                    enhancement_modules=enhancement_modules,
+                )
+                | github_index_commits.s(scan_id=scan_id)
+                | update_scan_status_async.s(scan_id=scan_id)
+            )
+            chain.apply_async(link_error=error_handler.s(scan_id=scan_id))
+    # @todo Figure out why link_error doesn't catch the exceptions.
+    except Exception as e:
+        update_scan_status_on_exception(e, scan_id)
 
     return scan_id
 
