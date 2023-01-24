@@ -1,5 +1,8 @@
 from flask import Blueprint, jsonify, request, abort, current_app
 import leaktopus.common.db_handler as dbh
+from leaktopus.domain.leak.usecases.get_leak_by_id_use_case import GetLeakByIdUseCase
+from leaktopus.factory import create_leak_service, create_secret_service, create_domain_service, \
+    create_contributor_service, create_sensitive_keyword_service
 
 leaks_api = Blueprint('leaks_api', __name__)
 
@@ -63,9 +66,26 @@ def get_leak_by_id(id):
       200:
         description: The leak data.
     """
-    import leaktopus.common.leak_handler as leak_handler
-    leak = leak_handler.get_leak_by_id(int(id))
-    return jsonify(leak)
+    leak_service = create_leak_service()
+    secret_service = create_secret_service()
+    domain_service = create_domain_service()
+    contributor_service = create_contributor_service()
+    sensitive_keyword_service = create_sensitive_keyword_service()
+
+    use_case = GetLeakByIdUseCase(
+        leak_service,
+        secret_service,
+        domain_service,
+        contributor_service,
+        sensitive_keyword_service
+    )
+    leak = use_case.execute(int(id))
+
+    return jsonify({
+        "success": True,
+        "count": 1 if leak else 0,
+        "data": [leak]
+    })
 
 
 @leaks_api.route("/api/leak/<int:id>", methods=['PATCH'])

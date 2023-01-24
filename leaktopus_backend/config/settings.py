@@ -1,12 +1,14 @@
 import os
 from distutils.util import strtobool
 
-SECRET_KEY = os.getenv('SECRET_KEY', None)
+from config import celery
 
-SERVER_NAME = os.getenv('SERVER_NAME',
-                        'localhost:{0}'.format(os.getenv('DOCKER_WEB_PORT',
-                                                         '8000')))
-HTTPS_ENABLED = os.getenv('HTTPS_ENABLED', 0)
+SECRET_KEY = os.getenv("SECRET_KEY", None)
+
+SERVER_NAME = os.getenv(
+    "SERVER_NAME", "localhost:{0}".format(os.getenv("DOCKER_WEB_PORT", "8000"))
+)
+HTTPS_ENABLED = os.getenv("HTTPS_ENABLED", 0)
 
 # Flask-Mail.
 # MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
@@ -19,7 +21,7 @@ HTTPS_ENABLED = os.getenv('HTTPS_ENABLED', 0)
 
 DATABASE_PATH = os.environ.get("DB_PATH", "/tmp/leaktopus.sqlite")
 
-SERVER_URL = "https" if int(HTTPS_ENABLED) else "http" + '://' + SERVER_NAME
+SERVER_URL = "https" if int(HTTPS_ENABLED) else "http" + "://" + SERVER_NAME
 
 SERVICES = {
     "alert": {
@@ -33,7 +35,47 @@ SERVICES = {
         "options": {
             "db": True,
         },
-    }
+    },
+    "domain": {
+        "provider": "sqlite",
+        "options": {
+            "db": True,
+        },
+    },
+    "sensitive_keyword": {
+        "provider": "sqlite",
+        "options": {
+            "db": True,
+        },
+    },
+
+    "secret": {
+        "provider": "sqlite",
+        "options": {
+            "db": True,
+        },
+    },
+
+    "contributor": {
+        "provider": "sqlite",
+        "options": {
+            "db": True,
+        },
+    },
+    "ignore_pattern": {"providers": ["sqlite"]},
+    "leaktopus_config": {
+        "providers": ["initial_config"],
+        "defaults": {
+            "tlds": ["com", "net", "io", "info"],
+            "max_domain_emails": 150,
+            "max_non_org_emails": 5,
+            "max_fork_count": 2,
+            "max_star_count": 2,
+        },
+    },
+    "potential_leak_source_scan_status": {
+        "providers": ["sqlite"],
+    },
 }
 
 NOTIFICATION_CONFIG = {
@@ -44,20 +86,25 @@ NOTIFICATION_CONFIG = {
     "slack": {
         "integration_token": os.environ.get("SLACK_BOT_TOKEN"),
         "server_url": SERVER_URL,
-        "channel": os.environ.get("SLACK_CHANNEL_ID")
+        "channel": os.environ.get("SLACK_CHANNEL_ID"),
     },
 }
 
 # Redis.
-REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 # Celery.
 CELERY_CONFIG = {
-    'broker_url': REDIS_URL,
-    'result_backend': REDIS_URL,
-    'task_serializer': 'pickle',
-    'result_serializer': 'pickle',
-    'accept_content': ['pickle'],
-    'result_accept_content': ['pickle'],
-    'task_max_retries': None,
+    "broker_url": REDIS_URL,
+    "result_backend": REDIS_URL,
+    "include": celery.includes,
+    "task_max_retries": celery.max_retires,
+    "task_serializer": "pickle",
+    "result_serializer": "pickle",
+    "accept_content": ["pickle"],
+    "result_accept_content": ["pickle"],
+    "task_always_eager": os.getenv("CELERY_ALWAYS_EAGER", False),
+    "task_store_eager_result": os.getenv("CELERY_ALWAYS_EAGER", False),
+    "task_eager_propagates": os.getenv("CELERY_ALWAYS_EAGER", False),
 }
+USE_EXPERIMENTAL_REFACTORING = os.getenv("USE_EXPERIMENTAL_REFACTORING", False)

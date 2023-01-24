@@ -1,14 +1,25 @@
 import os
-from github import Github, RateLimitExceededException, BadCredentialsException, GithubException
+
+from celery import shared_task
+from flask import current_app
+from github import (
+    Github,
+    RateLimitExceededException,
+    BadCredentialsException,
+    GithubException,
+)
 from datetime import datetime
 import re
 import json
 import leaktopus.common.db_handler as dbh
-from leaktopus.app import create_celery_app
 from leaktopus.exceptions.scans import ScanHasNoResults
 from loguru import logger
 
-celery = create_celery_app()
+from leaktopus.details.scan.potential_leak_source_request import (
+    PotentialLeakSourceRequest,
+)
+import leaktopus.common.scans as scans
+from leaktopus.models.scan_status import ScanStatus
 
 # Filters definitions
 # @todo Migrate to a configuration table.
@@ -18,8 +29,10 @@ MIN_NON_ORG_EMAIL = 5
 MIN_DOMAINS_NUMBER = 150
 
 
-def github_datetime_to_timestamp(github_datetime):
-    last_modified_datetime = datetime.strptime(github_datetime, '%a, %d %b %Y %H:%M:%S %Z')
+def datetime_to_timestamp(github_datetime):
+    last_modified_datetime = datetime.strptime(
+        github_datetime, "%a, %d %b %Y %H:%M:%S %Z"
+    )
     return datetime.timestamp(last_modified_datetime)
 
 
@@ -37,51 +50,67 @@ def save_gh_leaks(code_results, search_query, organization_domains):
         org_emails = []
         # Try to extract organization emails.
         try:
-            org_emails = get_org_emails(res.decoded_content.decode(), organization_domains)
+            org_emails = get_org_emails(
+                res.decoded_content.decode(), organization_domains
+            )
         except AssertionError as e:
-            logger.error("Failed to extract org emails from the content file {} of {} - {}",
-                     res,
-                     res.repository.clone_url,
-                     e)
+            logger.error(
+                "Failed to extract org emails from the content file {} of {} - {}",
+                res,
+                res.repository.clone_url,
+                e,
+            )
             pass
 
         leak_data = {
             "file_name": res.name,
             "file_url": res.html_url,
-            "org_emails": org_emails
+            "org_emails": org_emails,
         }
 
         # Group by repos.
-        if any(d['url'] == clone_url for d in grouped_results):
-            existing_res_key = next((i for i, item in enumerate(grouped_results) if item["url"] == clone_url), None)
+        if any(d["url"] == clone_url for d in grouped_results):
+            existing_res_key = next(
+                (
+                    i
+                    for i, item in enumerate(grouped_results)
+                    if item["url"] == clone_url
+                ),
+                None,
+            )
             grouped_results[existing_res_key]["leaks"].append(leak_data)
         else:
-            grouped_results.append({
-                "url": clone_url,
-                "last_modified": github_datetime_to_timestamp(res.repository.last_modified),
-                "leaks": [leak_data],
-                "search_query": search_query,
-                "type": "github",
-                "context": {
-                    "repo_name": res.repository.name,
-                    "owner": res.repository.owner.login if res.repository.owner.login else False,
-                    # "organization": res.repository.organization if res.repository.organization else False,
-                    "repo_description": res.repository.description,
-                    "default_branch": res.repository.default_branch,
-                    "is_fork": res.repository.fork,
-                    "forks_count": res.repository.forks_count,
-                    "watchers_count": res.repository.watchers_count,
-                    "stargazers_count": res.repository.stargazers_count,
-                    # The commit sha it was found on.
-                    # "sha": res.sha
+            grouped_results.append(
+                {
+                    "url": clone_url,
+                    "last_modified": datetime_to_timestamp(
+                        res.repository.last_modified
+                    ),
+                    "leaks": [leak_data],
+                    "search_query": search_query,
+                    "type": "github",
+                    "context": {
+                        "repo_name": res.repository.name,
+                        "owner": res.repository.owner.login
+                        if res.repository.owner.login
+                        else False,
+                        # "organization": res.repository.organization if res.repository.organization else False,
+                        "repo_description": res.repository.description,
+                        "default_branch": res.repository.default_branch,
+                        "is_fork": res.repository.fork,
+                        "forks_count": res.repository.forks_count,
+                        "watchers_count": res.repository.watchers_count,
+                        "stargazers_count": res.repository.stargazers_count,
+                        # The commit sha it was found on.
+                        # "sha": res.sha
+                    },
                 }
-            })
+            )
 
     # Now, save all the (grouped) leaks to the DB.
     for leaks_repo in grouped_results:
         # Skip if existing and if not modified since acknowledged.
         existing_leak = get_leak(clone_url)
-        # @todo Update leak in case that the repo was modified since previous scan and it wasn't acknowledged yet.
         if existing_leak and not existing_leak["acknowledged"]:
             continue
 
@@ -92,7 +121,7 @@ def save_gh_leaks(code_results, search_query, organization_domains):
             json.dumps(leaks_repo["context"]),
             json.dumps(leaks_repo["leaks"]),
             False,
-            leaks_repo["last_modified"]
+            leaks_repo["last_modified"],
         )
 
     return grouped_results
@@ -100,14 +129,14 @@ def save_gh_leaks(code_results, search_query, organization_domains):
 
 def github_authenticate():
     # Authenticate to github
-    github_access_token = os.environ.get('GITHUB_ACCESS_TOKEN')
+    github_access_token = os.environ.get("GITHUB_ACCESS_TOKEN")
     if not github_access_token:
         logger.critical("Error: GitHub API key is missing.")
         return None
     try:
         g = Github(github_access_token)
     except BadCredentialsException:
-        logger.critical('Error:GitHub bad credentials.')
+        logger.critical("Error:GitHub bad credentials.")
         return None
     except RateLimitExceededException as e:
         raise
@@ -144,18 +173,18 @@ def github_get_num_of_pages(results):
         logger.error("Error with getting last page url - {}", e)
         return None
     if url:
-        num_of_pages = int(parse_qs(urlparse(url).query)['page'][0])
+        num_of_pages = int(parse_qs(urlparse(url).query)["page"][0])
     else:
         num_of_pages = 1
 
     return num_of_pages
 
 
-@celery.task(bind=True, max_retries=200)
+@shared_task(bind=True, max_retries=200)
 def github_preprocessor(self, search_query, scan_id):
     from leaktopus.exceptions.scans import ScanHasNoResults
 
-    # Authenticates to github, get results object, get number of pages the object has
+    # Authenticates to Github, get results object, get number of pages the object has
     try:
         g = github_authenticate()
         if not g:
@@ -170,7 +199,9 @@ def github_preprocessor(self, search_query, scan_id):
             return None
 
     except RateLimitExceededException as e:
-        logger.warning('Rate limit exceeded when preprocessing github. Retry in 5 seconds')
+        logger.warning(
+            "Rate limit exceeded when preprocessing github. Retry in 5 seconds"
+        )
         raise self.retry(exc=e, countdown=5)
 
     answer = {"results": results, "num_pages": num_pages, "search_query": search_query}
@@ -189,8 +220,9 @@ def merge_pages(pages):
     return results
 
 
-@celery.task()
+@shared_task()
 def github_fetch_pages(struct, scan_id, organization_domains):
+    # trigger_pages_scan_task_entrypoint starts
     # Executing tasks to get results per page
     from celery import group
     from celery.result import allow_join_result
@@ -201,25 +233,31 @@ def github_fetch_pages(struct, scan_id, organization_domains):
 
     # Skip step if abort was requested.
     import leaktopus.common.scans as scans
-    from leaktopus.models.scan_status import ScanStatus
+
     if scans.is_scan_aborting(scan_id):
         return []
 
     # group of tasks, one per page
-    task_group = group([
-        github_get_page.s(results=struct["results"], page_num=n, scan_id=scan_id) for n in range(struct["num_pages"])
-    ])
+    task_group = group(
+        [
+            github_get_page.s(results=struct["results"], page_num=n, scan_id=scan_id)
+            for n in range(struct["num_pages"])
+        ]
+    )
     result_group = task_group.apply_async()
 
     # Waiting for all pages to finish
     while result_group.waiting():
         continue
 
-    if os.environ.get('USE_EXPERIMENTAL_SHOW_PARTIAL_RESULTS_EVEN_IF_TASK_FAILS', False):
-        logger.info(
-            "Using experimental show partial results even if task fails.")
+    if os.environ.get(
+        "USE_EXPERIMENTAL_SHOW_PARTIAL_RESULTS_EVEN_IF_TASK_FAILS", False
+    ):
+        logger.info("Using experimental show partial results even if task fails.")
         with allow_join_result():
-            pr = show_partial_results(result_group, struct["search_query"], organization_domains)
+            pr = show_partial_results(
+                result_group, struct["search_query"], organization_domains
+            )
             if not pr:
                 raise ScanHasNoResults("All results including partial were filtered")
 
@@ -232,12 +270,14 @@ def github_fetch_pages(struct, scan_id, organization_domains):
             # Gather results to list
             results_group_list = result_group.join()
             merged_pages = merge_pages(results_group_list)
-            gh_results_filtered = filter_gh_results(
-                merged_pages, organization_domains)
-            return save_gh_leaks(gh_results_filtered, struct["search_query"], organization_domains)
+            gh_results_filtered = filter_gh_results(merged_pages, organization_domains)
+            return save_gh_leaks(
+                gh_results_filtered, struct["search_query"], organization_domains
+            )
         else:
             logger.error(
-                'There was an error in getting at least one of the github result pages.')
+                "There was an error in getting at least one of the github result pages."
+            )
             return []
 
 
@@ -248,23 +288,26 @@ def show_partial_results(result_group, search_query, organization_domains):
             rg = result.get()
             results_group_list = [rg]
             merged_pages = merge_pages(results_group_list)
-            gh_results_filtered = filter_gh_results(
-                merged_pages, organization_domains)
-            grouped_results += save_gh_leaks(gh_results_filtered,
-                                             search_query, organization_domains)
+            gh_results_filtered = filter_gh_results(merged_pages, organization_domains)
+            grouped_results += save_gh_leaks(
+                gh_results_filtered, search_query, organization_domains
+            )
         except ScanHasNoResults as e:
             logger.info("Scan has no results: {}".format(e))
         except Exception as e:
             logger.error(
-                'There was an error in getting at least one of the github result pages. Task: {}. Error: {}', result, e)
+                "There was an error in getting at least one of the github result pages. Task: {}. Error: {}",
+                result,
+                e,
+            )
     return grouped_results
 
 
-@celery.task(bind=True, max_retries=200)
+@shared_task(bind=True, max_retries=200)
 def github_get_page(self, results, page_num, scan_id):
     # Skip step if abort was requested.
     import leaktopus.common.scans as scans
-    from leaktopus.models.scan_status import ScanStatus
+
     if scans.is_scan_aborting(scan_id):
         return None
 
@@ -272,7 +315,6 @@ def github_get_page(self, results, page_num, scan_id):
     try:
         cur_page = results.get_page(page_num)
         # Force download attributes.
-        # @todo get rid of this code
         for result in cur_page:
             try:
                 clone_url = result.repository.clone_url
@@ -294,12 +336,15 @@ def github_get_page(self, results, page_num, scan_id):
             except TimeoutError as e:
                 continue
     except RateLimitExceededException as e:
-        logger.warning('Rate limit exceeded on getting page number {} from github. Retry in 10 seconds', page_num)
+        logger.warning(
+            "Rate limit exceeded on getting page number {} from github. Retry in 10 seconds",
+            page_num,
+        )
         raise self.retry(exc=e, countdown=10)
     return cur_page
 
 
-@celery.task()
+@shared_task()
 def gh_get_repos_full_names(gh_results_struct):
     repo_full_names = []
 
@@ -308,15 +353,18 @@ def gh_get_repos_full_names(gh_results_struct):
         return []
 
     for result in gh_results_struct:
-        repo_full_names.append(result["context"]["owner"] + "/" + result["context"]["repo_name"])
+        repo_full_names.append(
+            result["context"]["owner"] + "/" + result["context"]["repo_name"]
+        )
 
     return repo_full_names
 
 
-@celery.task
+@shared_task
 def update_scan_status_async(repos_full_names, scan_id):
     import leaktopus.common.scans as scans
     from leaktopus.models.scan_status import ScanStatus
+
     if scans.is_scan_aborting(scan_id):
         # Set the status to aborted (this is the last step).
         scans.update_scan_status(scan_id, ScanStatus.SCAN_ABORTED)
@@ -329,24 +377,29 @@ def update_scan_status_async(repos_full_names, scan_id):
         scans.update_scan_status(scan_id, ScanStatus.SCAN_FAILED)
 
 
-@celery.task
-def error_handler(request, exc, traceback, scan_id):
-    from leaktopus.exceptions.scans import ScanHasNoResults
-
-    logger.error('Task {} raised exception: {}', request.id, exc)
-
-    import leaktopus.common.scans as scans
-    from leaktopus.models.scan_status import ScanStatus
-    if isinstance(exc, ScanHasNoResults):
-        # In case of no results exception - change the status to done.
+def update_scan_status_on_exception(e, scan_id):
+    if isinstance(e, ScanHasNoResults):
+        logger.info("Scan {} has no results: {}", scan_id, e)
         scans.update_scan_status(scan_id, ScanStatus.SCAN_DONE)
     else:
+        logger.error("Error in scan {}: {}", scan_id, e)
         scans.update_scan_status(scan_id, ScanStatus.SCAN_FAILED)
 
 
-def scan(search_query, organization_domains=[], sensitive_keywords=[], enhancement_modules=[]):
+@shared_task
+def error_handler(request, e, traceback, scan_id):
+    if not isinstance(e, ScanHasNoResults):
+        logger.error("Task {} raised exception: {}", request.id, e)
+
+    update_scan_status_on_exception(e, scan_id)
+
+
+def scan(
+    search_query, organization_domains=[], sensitive_keywords=[], enhancement_modules=[]
+):
     from leaktopus.common.github_indexer import github_index_commits
     from leaktopus.common.leak_enhancer import leak_enhancer
+    from leaktopus.details.entrypoints.scan.task import trigger_pages_scan_task_entrypoint
     import leaktopus.common.scans as scans
 
     # Do not run scan if one for the same search query is already running.
@@ -356,25 +409,47 @@ def scan(search_query, organization_domains=[], sensitive_keywords=[], enhanceme
 
     # Add the scan to DB.
     scan_id = scans.add_scan(search_query)
-
-    chain = github_preprocessor.s(search_query=search_query, scan_id=scan_id) |\
-        github_fetch_pages.s(scan_id=scan_id, organization_domains=organization_domains) |\
-        gh_get_repos_full_names.s() |\
-        leak_enhancer.s(
-            scan_id=scan_id,
-            organization_domains=organization_domains,
-            sensitive_keywords=sensitive_keywords,
-            enhancement_modules=enhancement_modules
-        ) |\
-        github_index_commits.s(scan_id=scan_id) |\
-        update_scan_status_async.s(scan_id=scan_id)
-    chain.apply_async(link_error=error_handler.s(scan_id=scan_id))
+    try:
+        if current_app.config["USE_EXPERIMENTAL_REFACTORING"]:
+            logger.info("Using experimental refactoring")
+            potential_leak_source_request = PotentialLeakSourceRequest(
+                scan_id=scan_id,
+                search_query=search_query,
+                organization_domains=organization_domains,
+                sensitive_keywords=sensitive_keywords,
+                enhancement_modules=enhancement_modules,
+                provider_type="github",
+            )
+            chain = github_preprocessor.s(
+                search_query=search_query, scan_id=scan_id
+            ) | trigger_pages_scan_task_entrypoint.s(potential_leak_source_request, "celery")
+            chain.apply_async(link_error=error_handler.s(scan_id=scan_id))
+        else:
+            chain = (
+                github_preprocessor.s(search_query=search_query, scan_id=scan_id)
+                | github_fetch_pages.s(
+                    scan_id=scan_id, organization_domains=organization_domains
+                )
+                | gh_get_repos_full_names.s()
+                | leak_enhancer.s(
+                    scan_id=scan_id,
+                    organization_domains=organization_domains,
+                    sensitive_keywords=sensitive_keywords,
+                    enhancement_modules=enhancement_modules,
+                )
+                | github_index_commits.s(scan_id=scan_id)
+                | update_scan_status_async.s(scan_id=scan_id)
+            )
+            chain.apply_async(link_error=error_handler.s(scan_id=scan_id))
+    # @todo Figure out why link_error doesn't catch the exceptions.
+    except Exception as e:
+        update_scan_status_on_exception(e, scan_id)
 
     return scan_id
 
 
 def get_emails_from_content(content):
-    return re.findall(r'[\w\.-]+@[\w\.-]+\.\w+', content)
+    return re.findall(r"[\w\.-]+@[\w\.-]+\.\w+", content)
 
 
 def get_org_emails(content, organization_domains):
@@ -402,7 +477,7 @@ def non_org_emails_count(content, organization_domains):
 def domains_count(content):
     # Find all domains (common extensions only) in the content.
     # @todo Improve the extensions list.
-    domains = re.findall(r'[\w\.-]+\.(?:com|net|info|io)', content, re.MULTILINE)
+    domains = re.findall(r"[\w\.-]+\.(?:com|net|info|io)", content, re.MULTILINE)
 
     return len(domains)
 
@@ -441,7 +516,7 @@ def is_repo_requires_scan(repo):
 
     # Check if the repository was modified since the previous scan.
     known_last_modified = last_known_leak["last_modified"]
-    last_modified = github_datetime_to_timestamp(repo.repository.last_modified)
+    last_modified = datetime_to_timestamp(repo.repository.last_modified)
     if last_modified > known_last_modified:
         return True
 
@@ -451,7 +526,10 @@ def is_repo_requires_scan(repo):
 def filter_gh_results(code_results, organization_domains):
     filtered_results = []
 
-    logger.info("Search results filtering started - {} results before filtering", len(code_results))
+    logger.info(
+        "Search results filtering started - {} results before filtering",
+        len(code_results),
+    )
 
     # Replace with a dynamic list editable by the user.
     # gh_filtered_repos()
@@ -490,10 +568,9 @@ def filter_gh_results(code_results, organization_domains):
                 # logger.debug('{} was skipped since it has more than {} external domains', repo_url, MIN_DOMAINS_NUMBER)
                 continue
         except AssertionError as e:
-            logger.error("Failed to fetch the content file {} of {} - {}",
-                         result,
-                         repo_url,
-                         e)
+            logger.error(
+                "Failed to fetch the content file {} of {} - {}", result, repo_url, e
+            )
             pass
 
         filtered_results.append(result)
@@ -501,8 +578,14 @@ def filter_gh_results(code_results, organization_domains):
     # In case that all results were filtered - raise no results exception.
     if not filtered_results:
         from leaktopus.exceptions.scans import ScanHasNoResults
-        logger.info("All results were filtered", )
+
+        logger.info(
+            "All results were filtered",
+        )
         raise ScanHasNoResults("All results were filtered")
 
-    logger.info("Search results filtering has been completed - {} results after filtering", len(filtered_results))
+    logger.info(
+        "Search results filtering has been completed - {} results after filtering",
+        len(filtered_results),
+    )
     return filtered_results

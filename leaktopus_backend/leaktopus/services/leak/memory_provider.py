@@ -16,7 +16,7 @@ class LeakMemoryProvider(LeakProviderInterface):
         for prop, value in kwargs.items():
             filtered_leaks = [
                 s for s in filtered_leaks
-                if s[prop] == value
+                if getattr(s, prop) == value
             ]
 
         return (
@@ -25,24 +25,35 @@ class LeakMemoryProvider(LeakProviderInterface):
             else filtered_leaks
         )
 
-    def add_leak(self, url, search_query, leak_type, context, leaks, acknowledged, last_modified, **kwargs):
-        pid = len(self.leaks)+1
+    def add_leak(self, url, search_query, type, context, iol, acknowledged, last_modified, **kwargs):
+        leak_id = len(self.leaks)+1
         now = datetime.datetime.now()
         created_at = now.strftime("%Y-%m-%d %H:%M:%S")
-        leak = Leak(pid, url, search_query, leak_type, context, leaks, acknowledged, last_modified, created_at, **kwargs)
+        leak = Leak(leak_id, url, search_query, type, context, iol, acknowledged, last_modified, created_at, **kwargs)
 
         self.leaks.append(leak)
         return (
             self.override_methods["add_leak"]()
             if "add_leak" in self.override_methods
-            else pid
+            else leak_id
         )
 
     def update_leak(self, leak_id, **kwargs):
         for leak in self.leaks:
-            if leak.pid == leak_id:
+            if leak.leak_id == leak_id:
                 for prop, value in kwargs.items():
-                    leak[prop] = value
+                    setattr(leak, prop, value)
+
+    def update_iol(self, leak_id, iol):
+        for leak in self.leaks:
+            if leak.leak_id == leak_id:
+                iols = leak.iol
+                # check if the text already exists in the leaks list
+                if iol not in iols:
+                    # if not, add it to the list
+                    iols.append(iol)
+                    # update the leaks attribute of the leak object
+                    setattr(leak, "iol", iols)
 
     def delete_leak_by_url(self, url, **kwargs):
         for leak in self.leaks:

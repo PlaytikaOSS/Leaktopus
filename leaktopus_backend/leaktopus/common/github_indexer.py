@@ -1,12 +1,9 @@
+from celery import shared_task
 import os
 import time
 from datetime import datetime
 from github import Github, RateLimitExceededException
-from leaktopus.app import create_celery_app
 from leaktopus.common.elasticsearch_handler import es
-
-celery = create_celery_app()
-
 
 # The Threshold should be higher from the number of worker threads.
 GITHUB_RATE_LIMIT_THRESHOLD = 20
@@ -35,7 +32,7 @@ def is_commit_indexed(sha):
     return es.exists(index=ES_INDEX_NAME, id=sha)
 
 
-@celery.task
+@shared_task()
 def github_index_commits(repos_full_names, scan_id):
     import leaktopus.common.scans as scans
     from leaktopus.models.scan_status import ScanStatus

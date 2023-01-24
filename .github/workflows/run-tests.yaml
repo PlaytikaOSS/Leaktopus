@@ -1,0 +1,47 @@
+name: CI Tests
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          base: ${{ github.event.inputs.base }}
+          filters: |
+            backend:
+              - 'leaktopus_backend/**'
+            frontend:
+              - 'leaktopus_frontend/**'
+
+  unit-tests:
+    needs: [ changes ]
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4.2.0
+        with:
+          python-version: 3.9
+          cache: 'pip' # caching pip dependencies
+
+      - name: Install dependencies
+        run: pip install -r leaktopus_backend/requirements.txt
+
+      - name: Run unit tests
+        run: |
+          pytest --ignore leaktopus_backend/leaktopus/tests leaktopus_backend/leaktopus

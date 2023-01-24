@@ -1,22 +1,19 @@
-from flask import Flask, g, redirect, url_for, abort
+from flask import Flask
 from flask_cors import CORS
 from werkzeug.debug import DebuggedApplication
-from celery import Celery
-
+from celery import current_app as current_celery_app
 from config.celery import cronjobs
 from leaktopus.common.db_handler import close_connection
 from leaktopus.routes.github.github_api import github_api
 from leaktopus.routes.system.system_api import system_api
-from leaktopus.routes.alerts.alerts_api import alerts_api
+from leaktopus.details.entrypoints.alerts.alerts_api import alerts_api
 from leaktopus.routes.leaks.leaks_api import leaks_api
-from leaktopus.routes.scans.scans_api import scans_api
+from leaktopus.details.entrypoints.scan.api import scans_api
 from leaktopus.tasks.clients.celery_client import CeleryClient
-from leaktopus.utils.common_imports import logger
-import os
 from flasgger import Swagger
 
 
-def create_celery_app(app=None):
+def make_celery_app(app):
     """
     Create a new Celery object and tie together the Celery config to the app's
     config. Wrap all tasks in the context of the application.
@@ -24,10 +21,8 @@ def create_celery_app(app=None):
     :param app: Flask app
     :return: Celery app
     """
-    logger.debug("____create_celery_app: {} ", app)
-    app = app or create_app()
-    celery = Celery(app.import_name)
 
+    celery = current_celery_app
     celery_config = app.config.get("CELERY_CONFIG", {})
     celery.conf.update(celery_config)
     celery.conf.beat_schedule = cronjobs
@@ -41,6 +36,7 @@ def create_celery_app(app=None):
                 return TaskBase.__call__(self, *args, **kwargs)
 
     celery.Task = ContextTask
+    app.celery = celery
     return celery
 
 
@@ -58,14 +54,17 @@ def create_app(settings_override=None, task_manager=None):
     """
     app = Flask(__name__)
     # cache.init_app(app, config={'CACHE_TYPE': 'simple'})
-    logger.debug("____create_app: {} ", settings_override)
 
-    app.config.from_object('config.settings')
+    app.config.from_object("config.settings")
     if settings_override:
+        # Update CELERY_CONFIG settings since .update doesn't work recursively.
+        celery_config = app.config.get("CELERY_CONFIG", {})
+        celery_config.update(settings_override.get("CELERY_CONFIG", {}))
         app.config.update(settings_override)
+        app.config["CELERY_CONFIG"] = celery_config
 
+    make_celery_app(app)
     app.teardown_appcontext(close_connection)
-    # "/tmp/leaktopus.sqlite"
 
     if task_manager is None:
         with app.app_context():
@@ -106,6 +105,3 @@ def extensions(app):
     # flask_static_digest.init_app(app)
 
     return None
-
-
-celery_app = create_celery_app()

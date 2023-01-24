@@ -39,7 +39,7 @@ class NotificationSlackProvider(NotificationProviderInterface):
                                 "type": "plain_text",
                                 "text": "View leak",
                             },
-                            "url": f"{self.server_url}/api/leak/{leak.pid}",
+                            "url": f"{self.server_url}/api/leak/{leak.leak_id}",
                             "action_id": "button-action"
                         }
                     }
