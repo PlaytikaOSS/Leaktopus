@@ -2,7 +2,7 @@ import os
 
 from github import Github
 
-from leaktopus.app import create_celery_app
+from leaktopus.app import make_celery_app
 from leaktopus.common.scanner_async import github_get_num_of_pages
 from leaktopus.details.entrypoints.scan.task import (
     trigger_pages_scan_task_entrypoint,
@@ -17,7 +17,7 @@ def main():
     search_query = "leaktopus"
     code_results = g.search_code(query=search_query)
     num_pages = github_get_num_of_pages(code_results)
-    celery = create_celery_app()
+    celery = make_celery_app()
 
     scan_id = 1
     initial_search_metadata = {

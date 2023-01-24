@@ -1,8 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 from werkzeug.debug import DebuggedApplication
-from celery import Celery
-
+from celery import current_app as current_celery_app
 from config.celery import cronjobs
 from leaktopus.common.db_handler import close_connection
 from leaktopus.routes.github.github_api import github_api
@@ -14,7 +13,7 @@ from leaktopus.tasks.clients.celery_client import CeleryClient
 from flasgger import Swagger
 
 
-def create_celery_app(app):
+def make_celery_app(app):
     """
     Create a new Celery object and tie together the Celery config to the app's
     config. Wrap all tasks in the context of the application.
@@ -22,8 +21,8 @@ def create_celery_app(app):
     :param app: Flask app
     :return: Celery app
     """
-    celery = Celery(app.import_name)
 
+    celery = current_celery_app
     celery_config = app.config.get("CELERY_CONFIG", {})
     celery.conf.update(celery_config)
     celery.conf.beat_schedule = cronjobs
@@ -37,6 +36,7 @@ def create_celery_app(app):
                 return TaskBase.__call__(self, *args, **kwargs)
 
     celery.Task = ContextTask
+    app.celery = celery
     return celery
 
 
@@ -63,6 +63,7 @@ def create_app(settings_override=None, task_manager=None):
         app.config.update(settings_override)
         app.config["CELERY_CONFIG"] = celery_config
 
+    make_celery_app(app)
     app.teardown_appcontext(close_connection)
 
     if task_manager is None:
@@ -78,8 +79,6 @@ def create_app(settings_override=None, task_manager=None):
 
     if app.debug:
         app.wsgi_app = DebuggedApplication(app.wsgi_app, evalex=True)
-
-    create_celery_app(app)
 
     return app
 

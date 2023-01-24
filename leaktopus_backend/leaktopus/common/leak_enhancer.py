@@ -5,8 +5,6 @@ from git.repo.base import Repo
 import subprocess
 from loguru import logger
 
-from leaktopus.app import create_celery_app
-
 # How many times to retry the analysis task before failing.
 ANALYSIS_MAX_RETRIES = 10
 # Interval between analysis task retry.

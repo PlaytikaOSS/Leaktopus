@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from leaktopus.app import create_app, create_celery_app
+from leaktopus.app import create_app
 from leaktopus.domain.extractors.domain_extractor import DomainExtractor
 from leaktopus.domain.extractors.email_extractor import EmailExtractor
 from leaktopus.services.alert.alert_service import AlertService
