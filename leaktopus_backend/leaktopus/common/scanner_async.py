@@ -111,7 +111,6 @@ def save_gh_leaks(code_results, search_query, organization_domains):
     for leaks_repo in grouped_results:
         # Skip if existing and if not modified since acknowledged.
         existing_leak = get_leak(clone_url)
-        # @todo Update leak in case that the repo was modified since previous scan and it wasn't acknowledged yet.
         if existing_leak and not existing_leak["acknowledged"]:
             continue
 
@@ -316,7 +315,6 @@ def github_get_page(self, results, page_num, scan_id):
     try:
         cur_page = results.get_page(page_num)
         # Force download attributes.
-        # @todo get rid of this code
         for result in cur_page:
             try:
                 clone_url = result.repository.clone_url
