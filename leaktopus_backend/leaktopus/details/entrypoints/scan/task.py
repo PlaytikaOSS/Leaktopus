@@ -1,5 +1,3 @@
-import json
-
 from celery import shared_task
 
 from leaktopus.details.scan.potential_leak_source_request import (
@@ -53,7 +51,7 @@ def trigger_pages_scan_task_entrypoint(
 @shared_task(
     bind=True,
     max_retries=200,
-    auto_retry_for=(CouldNotFetchException,),
+    autoretry_for=(CouldNotFetchException,),
 )
 def fetch_potential_leak_source_page_task_entrypoint(
     self,
