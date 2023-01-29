@@ -1,5 +1,6 @@
 import os
 from distutils.util import strtobool
+from urllib.parse import urlsplit
 
 from config import celery
 
@@ -91,7 +92,11 @@ NOTIFICATION_CONFIG = {
 }
 
 # Redis.
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+url_parts = urlsplit(REDIS_URL)
+REDIS_HOST = url_parts.hostname
+REDIS_PORT = url_parts.port
+REDIS_DB = url_parts.path.strip("/")
 
 # Celery.
 CELERY_CONFIG = {

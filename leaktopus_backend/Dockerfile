@@ -6,6 +6,27 @@ ENV GOBIN /go/bin
 #RUN export CGO_ENABLED=0 && go get github.com/eth0izzle/shhgit
 RUN export CGO_ENABLED=0 && go install github.com/eth0izzle/shhgit@latest
 
+FROM python:3.10-slim-buster as sqlite
+RUN apt-get update \
+  && apt-get install -y build-essential tk-dev mesa-common-dev wget git --no-install-recommends \
+  && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man \
+  && apt-get clean
+
+
+# Update sqlite3 to latest version.
+# @see https://github.com/swagcharm/latest-sqlite-for-python-images
+RUN \
+  wget \
+    -O sqlite.tar.gz \
+    https://www.sqlite.org/src/tarball/sqlite.tar.gz?r=release \
+    && \
+    tar xvfz sqlite.tar.gz
+
+RUN \
+  ./sqlite/configure --prefix=/sqlite && \
+  make && \
+  make install
+
 FROM python:3.10-slim-buster as app
 LABEL maintainer="Rotem Reiss <rotemr@playtika.com>"
 
@@ -18,22 +39,6 @@ RUN apt-get update \
   && useradd --create-home python \
   && mkdir -p /home/python/.cache/pip && chown python:python -R /home/python /app
 
-# Update sqlite3 to latest version.
-# @see https://github.com/swagcharm/latest-sqlite-for-python-images
-RUN \
-  wget \
-    -O sqlite.tar.gz \
-    https://www.sqlite.org/src/tarball/sqlite.tar.gz?r=release \
-    && \
-    tar xvfz sqlite.tar.gz
-
-RUN \
-  ./sqlite/configure --prefix=/usr && \
-  make && \
-  make install \
-  && \
-  # Smoke test
-  sqlite3 --version
 
 ENV LD_PRELOAD="/usr/lib/libsqlite3.so"
 
@@ -48,7 +53,10 @@ COPY --chown=python:python db/ /db
 # Directory for the temp data (e.g. clones).
 COPY --chown=python:python data/ /data
 
-RUN chmod 0755 bin/* && bin/pip3-install
+COPY --from=sqlite --chown=python:python /sqlite/bin/sqlite3 /usr/local/bin
+COPY --from=sqlite --chown=python:python /sqlite/lib/* /usr/lib/
+
+RUN --mount=type=cache,target=/root/.cache chmod 0755 bin/* && bin/pip3-install
 
 ARG FLASK_ENV="production"
 ENV FLASK_ENV="${FLASK_ENV}" \
@@ -68,7 +76,6 @@ COPY --chown=python:python . .
 
 # Add
 COPY --from=builder --chown=python:python /go/bin/shhgit /usr/local/bin
-
 ENTRYPOINT ["/app/bin/docker-entrypoint-web"]
 
 EXPOSE 8000
