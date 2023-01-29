@@ -37,7 +37,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man \
   && apt-get clean \
   && useradd --create-home python \
-  && mkdir -p /home/python/.cache/pip && chown python:python -R /home/python /app
+  && mkdir -p /home/python/.cache/pip -m 0755 && chown python:python -R /home/python /app
 
 
 ENV LD_PRELOAD="/usr/lib/libsqlite3.so"
@@ -56,7 +56,7 @@ COPY --chown=python:python data/ /data
 COPY --from=sqlite --chown=python:python /sqlite/bin/sqlite3 /usr/local/bin
 COPY --from=sqlite --chown=python:python /sqlite/lib/* /usr/lib/
 
-RUN --mount=type=cache,target=/root/.cache chmod 0755 bin/* && bin/pip3-install
+RUN --mount=type=cache,mode=0777,target=/root/.cache/pip chmod 0755 bin/* && bin/pip3-install
 
 ARG FLASK_ENV="production"
 ENV FLASK_ENV="${FLASK_ENV}" \

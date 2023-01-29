@@ -104,6 +104,8 @@ CELERY_CONFIG = {
     "result_backend": REDIS_URL,
     "include": celery.includes,
     "task_max_retries": celery.max_retires,
+    "task_reject_on_worker_lost": True,
+    "task_acks_late": True,
     "task_serializer": "pickle",
     "result_serializer": "pickle",
     "accept_content": ["pickle"],
