@@ -6,3 +6,4 @@ docker-compose.override.yml
 venv
 __pycache__
 *.sqlite
+leaktopus_backend/private-key.pem
