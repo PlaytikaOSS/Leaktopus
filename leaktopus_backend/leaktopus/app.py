@@ -1,5 +1,9 @@
+from logging import getLogger
+
 from flask import Flask
 from flask_cors import CORS
+from leaktopus.requests_cache import  CustomCachedSessionWithPickleSupport
+
 from werkzeug.debug import DebuggedApplication
 from celery import current_app as current_celery_app
 from config.celery import cronjobs
@@ -11,7 +15,6 @@ from leaktopus.routes.leaks.leaks_api import leaks_api
 from leaktopus.details.entrypoints.scan.api import scans_api
 from leaktopus.tasks.clients.celery_client import CeleryClient
 from flasgger import Swagger
-
 
 def make_celery_app(app):
     """
@@ -46,6 +49,7 @@ def create_task_manager():
     return TaskManager(CeleryClient())
 
 
+
 def create_app(settings_override=None, task_manager=None):
     """
     Create a Flask application using the app factory pattern.
@@ -62,6 +66,8 @@ def create_app(settings_override=None, task_manager=None):
         celery_config.update(settings_override.get("CELERY_CONFIG", {}))
         app.config.update(settings_override)
         app.config["CELERY_CONFIG"] = celery_config
+
+    CustomCachedSessionWithPickleSupport.register(app)
 
     make_celery_app(app)
     app.teardown_appcontext(close_connection)
