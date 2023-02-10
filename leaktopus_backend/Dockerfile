@@ -6,26 +6,7 @@ ENV GOBIN /go/bin
 #RUN export CGO_ENABLED=0 && go get github.com/eth0izzle/shhgit
 RUN export CGO_ENABLED=0 && go install github.com/eth0izzle/shhgit@latest
 
-FROM python:3.10-slim-buster as sqlite
-RUN apt-get update \
-  && apt-get install -y build-essential tk-dev mesa-common-dev wget git --no-install-recommends \
-  && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man \
-  && apt-get clean
-
-
-# Update sqlite3 to latest version.
-# @see https://github.com/swagcharm/latest-sqlite-for-python-images
-RUN \
-  wget \
-    -O sqlite.tar.gz \
-    https://www.sqlite.org/src/tarball/sqlite.tar.gz?r=release \
-    && \
-    tar xvfz sqlite.tar.gz
-
-RUN \
-  ./sqlite/configure --prefix=/sqlite && \
-  make && \
-  make install
+FROM shakedos/sqlite:latest as sqlite
 
 FROM python:3.10-slim-buster as app
 LABEL maintainer="Rotem Reiss <rotemr@playtika.com>"
