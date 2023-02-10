@@ -98,6 +98,12 @@ REDIS_HOST = url_parts.hostname
 REDIS_PORT = url_parts.port
 REDIS_DB = url_parts.path.strip("/")
 
+# Github.
+GITHUB_USE_APP = os.getenv("GITHUB_USE_APP", False)
+GITHUB_APP_ID = os.getenv("GITHUB_APP_ID", None)
+GITHUB_APP_PRIVATE_KEY_PATH = os.getenv("GITHUB_APP_PRIVATE_KEY_PATH", "/app/private-key.pem")
+GITHUB_INSTALLATION_ID = os.getenv("GITHUB_INSTALLATION_ID", None)
+
 # Celery.
 CELERY_CONFIG = {
     "broker_url": REDIS_URL,

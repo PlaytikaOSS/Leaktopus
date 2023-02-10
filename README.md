@@ -78,6 +78,24 @@ Based on the **Code C.A.I.N** framework:
   - The UI should be available at http://{LEAKTOPUS_HOST}:8080
 
 
+### Using Github App
+In addition to the basic personal access token option, Leaktopus supports Github App authentication.
+Using Github App is recommended due to the increased rate limits.
+
+1. To use Github App authentication, you need to create a Github App and install it on your organization/account.
+  See [Github's documentation](https://docs.github.com/en/developers/apps/creating-a-github-app) for more details.
+
+1. After creating the app, you need to set the following environment variables:
+    - `GITHUB_USE_APP=True`
+    - `GITHUB_APP_ID`
+    - `GITHUB_INSTALLATION_ID` - The installation id can be found in [your app installation](https://stackoverflow.com/a/74474953/533842).
+    - `GITHUB_APP_PRIVATE_KEY_PATH` (defaults to `/app/private-key.pem`)
+
+1. Mount the private key file to the container (see `docker-compose.yml` for an example).
+  `./leaktopus_backend/private-key.pem:/app/private-key.pem`
+
+_* Note that `GITHUB_ACCESS_TOKEN` will be ignored if `GITHUB_USE_APP` is set to `True`._
+
 ## Updating Leaktopus
 If you wish to update your Leaktopus version (pulling a newer version), just follow the next steps.
 

@@ -9,7 +9,6 @@ def get_last_id(db, table_name, last_row_id, id_key="id"):
     c = db.cursor()
     query = "SELECT {} FROM {} WHERE rowid=?".format(id_key, table_name)
     ret = c.execute(query, (last_row_id,)).fetchone()
-    logger.debug("query: {} {}".format(query, ret))
 
     if id_key not in ret:
         raise Exception("id_key {} not in ret: {}".format(id_key, ret))

@@ -4,6 +4,7 @@ from celery import shared_task
 from flask import current_app
 from github import (
     Github,
+    GithubIntegration,
     RateLimitExceededException,
     BadCredentialsException,
     GithubException,
@@ -180,13 +181,37 @@ def github_get_num_of_pages(results):
     return num_of_pages
 
 
+def get_github_connection():
+    if current_app.config["GITHUB_USE_APP"]:
+        logger.info("Using GitHub App for authentication.")
+        private_key_path = current_app.config["GITHUB_APP_PRIVATE_KEY_PATH"]
+        app_id = current_app.config["GITHUB_APP_ID"]
+
+        # Read the app certificate
+        with open(private_key_path, 'r') as cert_file:
+            app_key = cert_file.read()
+
+        # Create an GitHub integration instance
+        git_integration = GithubIntegration(
+            app_id,
+            app_key
+        )
+
+        return Github(
+            login_or_token=git_integration.get_access_token(current_app.config["GITHUB_INSTALLATION_ID"]).token
+        )
+    else:
+        logger.info("Using GitHub Personal Access Token for authentication.")
+        return github_authenticate()
+
+
 @shared_task(bind=True, max_retries=200)
 def github_preprocessor(self, search_query, scan_id):
     from leaktopus.exceptions.scans import ScanHasNoResults
 
     # Authenticates to Github, get results object, get number of pages the object has
     try:
-        g = github_authenticate()
+        g = get_github_connection()
         if not g:
             return None
 

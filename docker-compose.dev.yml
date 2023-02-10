@@ -16,6 +16,7 @@ x-app: &default-app
   volumes:
     - "./leaktopus_backend/db/:/db"
     - "./leaktopus_backend/:/app"
+#    - "./leaktopus_backend/private-key.pem:/app/private-key.pem"
 
 services:
   redis:
