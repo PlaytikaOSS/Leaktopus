@@ -92,7 +92,7 @@ NOTIFICATION_CONFIG = {
 }
 
 # Redis.
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 url_parts = urlsplit(REDIS_URL)
 REDIS_HOST = url_parts.hostname
 REDIS_PORT = url_parts.port
