@@ -3,6 +3,7 @@ from distutils.util import strtobool
 from urllib.parse import urlsplit
 
 from config import celery
+from requests_cache import RedisCache
 
 SECRET_KEY = os.getenv("SECRET_KEY", None)
 
@@ -121,5 +122,10 @@ CELERY_CONFIG = {
     "task_eager_propagates": os.getenv("CELERY_ALWAYS_EAGER", False),
 }
 USE_EXPERIMENTAL_REFACTORING = os.getenv("USE_EXPERIMENTAL_REFACTORING", False)
-REQUESTS_CACHE_ENABLED=os.getenv("REQUESTS_CACHE_ENABLED", True)
-REQUESTS_CACHE_LOG_LEVEL=os.getenv("REQUESTS_CACHE_LOG_LEVEL", "WARNING")
+REQUESTS_CACHE_ENABLED = os.getenv("REQUESTS_CACHE_ENABLED", True)
+REQUESTS_CACHE_LOG_LEVEL = os.getenv("REQUESTS_CACHE_LOG_LEVEL", "WARNING")
+REQUESTS_CACHE_BACKEND = RedisCache(
+    host=REDIS_HOST,
+    port=REDIS_PORT,
+    db=REDIS_DB
+)

@@ -4,6 +4,7 @@ from multiprocessing import RLock
 import loguru
 import requests
 from flask import current_app
+from leaktopus.utils import common_imports
 from requests_cache import CachedSession, RedisCache, init_backend
 
 
@@ -13,17 +14,14 @@ class CustomCachedSessionWithPickleSupport(CachedSession):
     def __init__(self, *args, **kwargs):
         with CustomCachedSessionWithPickleSupport.app.app_context():
             config = CustomCachedSessionWithPickleSupport.app.config
-            backend = RedisCache(
-                host=config["REDIS_HOST"],
-                port=config["REDIS_PORT"],
-                db=config["REDIS_DB"]
-            )
+            backend = config['REQUESTS_CACHE_BACKEND']
             self.backend = backend
             kwargs['backend'] = backend
             super().__init__(*args, **kwargs)
 
+
     def __getstate__(self):
-        loguru.logger.debug('PICKLING')
+        common_imports.logger.debug('PICKLING')
         self.cache = None
         self.filter_fn = None
         self._lock = None
@@ -31,14 +29,10 @@ class CustomCachedSessionWithPickleSupport(CachedSession):
         return self.__dict__
 
     def __setstate__(self, state):
-        loguru.logger.debug('UNPICKLING')
+        common_imports.logger.debug('UNPICKLING')
         with CustomCachedSessionWithPickleSupport.app.app_context():
             config = CustomCachedSessionWithPickleSupport.app.config
-            backend = RedisCache(
-                host=config["REDIS_HOST"],
-                port=config["REDIS_PORT"],
-                db=config["REDIS_DB"]
-            )
+            backend = config['REQUESTS_CACHE_BACKEND']
             cache = init_backend('http_cache', backend)
             state['cache'] = cache
             state['_lock'] = RLock()
@@ -47,7 +41,7 @@ class CustomCachedSessionWithPickleSupport(CachedSession):
 
     @staticmethod
     def register(app):
-        loguru.logger.debug('Registering CustomCachedSessionWithPickleSupport: {}', app.config["REQUESTS_CACHE_ENABLED"])
+        common_imports.logger.debug('Registering CustomCachedSessionWithPickleSupport: {}', app.config["REQUESTS_CACHE_ENABLED"])
         if app.config["REQUESTS_CACHE_ENABLED"]:
             logger = getLogger('requests_cache')
             logger.setLevel(app.config['REQUESTS_CACHE_LOG_LEVEL'])

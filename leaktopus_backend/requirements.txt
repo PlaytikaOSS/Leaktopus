@@ -40,3 +40,4 @@ pytest-mock==3.10.0
 pytest-cov==4.0.0
 
 requests_cache==0.9.8
+pytest-httpserver==1.0.0
