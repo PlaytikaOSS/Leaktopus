@@ -1,5 +1,3 @@
-from logging import getLogger
-
 from flask import Flask
 from flask_cors import CORS
 from leaktopus.requests_cache import  CustomCachedSessionWithPickleSupport
