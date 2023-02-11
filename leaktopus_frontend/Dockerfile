@@ -4,7 +4,8 @@ RUN wget --no-check-certificate https://github.com/stedolan/jq/releases/download
 RUN cp /tmp/jq-linux64 /usr/bin/jq
 RUN chmod +x /usr/bin/jq
 WORKDIR /app
-COPY . .
+COPY package-lock.json package.json babel.config.js jsconfig.json vue.config.js ./
+COPY src ./src
 RUN jq 'to_entries | map_values({ (.key) : ("$" + .key) }) | reduce .[] as $item ({}; . + $item)' ./src/config.json > ./src/config.tmp.json && mv ./src/config.tmp.json ./src/config.json
 RUN npm install && npm run build
 
@@ -15,4 +16,8 @@ RUN chmod +x /usr/bin/start-nginx.sh
 WORKDIR /usr/share/nginx/html
 
 COPY --from=0 /app/dist .
-ENTRYPOINT [ "start-nginx.sh" ]
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+ENTRYPOINT ["/tini", "--"]
+CMD [ "start-nginx.sh" ]
