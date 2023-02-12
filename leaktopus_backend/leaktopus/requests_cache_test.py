@@ -4,7 +4,7 @@ from leaktopus.requests_cache import CustomCachedSessionWithPickleSupport
 from requests_cache import BaseCache
 
 
-def testRequestsCacheEnabledSuccess(app, httpserver):
+def test_requests_cache_enabled_success(app, httpserver):
     config = app.config
     config['REQUESTS_CACHE_ENABLED'] = True
     config['REQUESTS_CACHE_BACKEND'] = BaseCache()
@@ -15,7 +15,7 @@ def testRequestsCacheEnabledSuccess(app, httpserver):
     assert requests_cache.get_cache().response_count() == 1
 
 
-def testRequestsCacheDisabledSuccess(app, httpserver):
+def test_requests_cache_disabled_success(app, httpserver):
     config = app.config
     config['REQUESTS_CACHE_ENABLED'] = False
 
