@@ -7,6 +7,13 @@ from leaktopus.services.contributor.contributor_service import ContributorServic
 from leaktopus.services.contributor.sqlite_provider import ContributorSqliteProvider
 from leaktopus.services.domain.domain_service import DomainService
 from leaktopus.services.domain.sqlite_provider import DomainSqliteProvider
+from leaktopus.services.enhancement_module.contributors_provider import EnhancementModuleContributorsProvider
+from leaktopus.services.enhancement_module.domains_provider import EnhancementModuleDomainsProvider
+from leaktopus.services.enhancement_module.enhancement_module_service import EnhancementModuleService
+from leaktopus.services.enhancement_module.secrets_provider import EnhancementModuleSecretsProvider
+from leaktopus.services.enhancement_module.sensitive_keywords_provider import EnhancementModuleSensitiveKeywordsProvider
+from leaktopus.services.enhancement_status.enhancement_status_service import EnhancementStatusService
+from leaktopus.services.enhancement_status.sqlite_provider import EnhancementStatusSqliteProvider
 from leaktopus.services.ignore_pattern.ignore_pattern_service import (
     IgnorePatternService,
 )
@@ -139,6 +146,21 @@ def create_alert_provider_from_config(config):
     ](options)
 
 
+def create_enhancement_status_provider_from_config(config):
+    options = provider_config_require_db(config)
+    return {"sqlite": EnhancementStatusSqliteProvider,}[
+        config["provider"]
+    ](options)
+
+
+def create_enhancement_status_service():
+    enhancement_status_provider = create_enhancement_status_provider_from_config(
+        current_app.config["SERVICES"]["enhancement_status"]
+    )
+    enhancement_status_service = EnhancementStatusService(enhancement_status_provider)
+    return enhancement_status_service
+
+
 def create_notification_provider_from_config(config, provider_type):
     supported_providers = {
         "ms_teams": NotificationMsTeamsProvider,
@@ -157,6 +179,34 @@ def create_notification_service(provider_type) -> NotificationService:
     )
     notification_service = NotificationService(provider)
     return notification_service
+
+
+def create_enhancement_module_providers_from_config(config, provider_types):
+    supported_providers = {
+        "sensitive_keywords": EnhancementModuleSensitiveKeywordsProvider,
+        "domains": EnhancementModuleDomainsProvider,
+        "contributors": EnhancementModuleContributorsProvider,
+        "secrets": EnhancementModuleSecretsProvider,
+    }
+
+    providers = []
+    for pt in provider_types:
+        if pt not in config.keys() or pt not in supported_providers:
+            raise Exception("Unsupported enhancement module provider {}".format(pt))
+        else:
+            providers.append(
+                EnhancementModuleService(supported_providers[pt](**config[pt]))
+            )
+
+    return providers
+
+
+def create_enhancement_module_services(provider_types) -> EnhancementModuleService:
+    enhancement_module_services = create_enhancement_module_providers_from_config(
+        current_app.config["ENHANCEMENT_MODULE_CONFIG"], provider_types
+    )
+
+    return enhancement_module_services
 
 
 def create_provider(supported_providers, providers_config):

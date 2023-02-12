@@ -38,11 +38,6 @@ class AbstractPotentialLeakSourceFilter(PotentialLeakSourceFilterInterface):
             logger.debug(f"Repository {potential_leak_source.url} is ignored")
             return False
 
-        # @todo Only check it in the enhance phase to save resources.
-        # if not self.is_repo_requires_scan(potential_leak_source):
-        #     logger.debug(f"Repository {potential_leak_source.url} doesn't require scan")
-        #     return False
-
         if self.fork_count_is_too_high(potential_leak_source):
             logger.debug(f"Repository {potential_leak_source.url} has too many forks")
             return False
@@ -72,24 +67,6 @@ class AbstractPotentialLeakSourceFilter(PotentialLeakSourceFilterInterface):
                 return True
 
         return False
-
-    # def is_repo_requires_scan(self, potential_leak_source: PotentialLeakSource):
-    #     leaks = self.leak_service.get_leaks(url=potential_leak_source.url)
-    #     if self.leak_not_scanned(leaks):
-    #         return True
-    #
-    #     if self.repository_was_updated_since_last_scan(potential_leak_source, leaks[0]):
-    #         return True
-    #
-    #     return False
-
-    def leak_not_scanned(self, leaks):
-        return not leaks
-
-    def repository_was_updated_since_last_scan(self, potential_leak_source, leak: Leak):
-        known_last_modified = leak.last_modified
-        last_modified = potential_leak_source.last_modified
-        return last_modified > known_last_modified
 
     @abstractmethod
     def extract_star_count(self, potential_leak_source):

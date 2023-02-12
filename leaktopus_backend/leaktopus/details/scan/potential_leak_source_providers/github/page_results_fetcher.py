@@ -1,6 +1,5 @@
 from github import RateLimitExceededException
-from loguru import logger
-
+from leaktopus.utils.common_imports import logger
 from leaktopus.common.scanner_async import datetime_to_timestamp
 from leaktopus.domain.scan.exceptions.could_not_fetch_exception import (
     CouldNotFetchException,
@@ -19,8 +18,7 @@ class GithubPotentialLeakSourcePageResultsFetcher(
             page_results = results.get_page(page_num)
             potential_leak_sources = self.generate_potential_leak_sources(page_results)
             return potential_leak_sources
-            # self.fix_bug_load_page_content_before_retrieving(page_results)
-            # return page_results
+
         except RateLimitExceededException as e:
             logger.warning(
                 "Rate limit exceeded on getting page number {} from github.",
@@ -36,27 +34,25 @@ class GithubPotentialLeakSourcePageResultsFetcher(
         return potential_leak_sources
 
     def generate_potential_leak_source(self, result) -> PotentialLeakSource:
+        repo = result.repository
+        content = result.decoded_content.decode()
         return PotentialLeakSource(
-            url=result.repository.clone_url,
+            url=repo.clone_url,
             html_url=result.html_url,
             name=result.name,
             source="github",
-            last_modified=datetime_to_timestamp(result.repository.last_modified),
-            content=result.decoded_content.decode(),
+            last_modified=datetime_to_timestamp(repo.last_modified),
+            content=content,
             context={
-                "repo_name": result.repository.name,
-                "owner": result.repository.owner.login
-                if result.repository.owner.login
+                "repo_name": repo.name,
+                "owner": repo.owner.login
+                if repo.owner.login
                 else False,
-                "repo_description": result.repository.description,
-                "default_branch": result.repository.default_branch,
-                "is_fork": result.repository.fork,
-                "forks_count": result.repository.forks_count,
-                "watchers_count": result.repository.watchers_count,
-                "stargazers_count": result.repository.stargazers_count,
+                "repo_description": repo.description,
+                "default_branch": repo.default_branch,
+                "is_fork": repo.fork,
+                "forks_count": repo.forks_count,
+                "watchers_count": repo.watchers_count,
+                "stargazers_count": repo.stargazers_count,
             },
         )
-
-    def fix_bug_load_page_content_before_retrieving(self, page_result):
-        for result in page_result:
-            d = result.decoded_content.decode()

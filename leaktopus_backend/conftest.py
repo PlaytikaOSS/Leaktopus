@@ -11,6 +11,10 @@ from leaktopus.services.contributor.contributor_service import ContributorServic
 from leaktopus.services.contributor.memory_provider import ContributorMemoryProvider
 from leaktopus.services.domain.domain_service import DomainService
 from leaktopus.services.domain.memory_provider import DomainMemoryProvider
+from leaktopus.services.enhancement_module.enhancement_module_service import EnhancementModuleService
+from leaktopus.services.enhancement_module.memory_provider import EnhancementModuleMemoryProvider
+from leaktopus.services.enhancement_status.enhancement_status_service import EnhancementStatusService
+from leaktopus.services.enhancement_status.memory_provider import EnhancementStatusMemoryProvider
 from leaktopus.services.ignore_pattern.ignore_pattern_provider_interface import (
     IgnorePatternProviderInterface,
 )
@@ -192,3 +196,17 @@ def factory_sensitive_keyword_service():
     return lambda sensitive_keywords=[], override_methods={}: SensitiveKeywordService(
         SensitiveKeywordMemoryProvider(sensitive_keywords=sensitive_keywords, override_methods=override_methods)
     )
+
+@pytest.fixture()
+def factory_enhancement_status_service():
+    return lambda enhancement_statuses=[], override_methods={}: EnhancementStatusService(
+        EnhancementStatusMemoryProvider(enhancement_statuses=enhancement_statuses, override_methods=override_methods)
+    )
+
+@pytest.fixture
+def factory_enhancement_module_service():
+    return lambda override_methods={}: [EnhancementModuleService(
+        EnhancementModuleMemoryProvider(
+            override_methods=override_methods
+        )
+    )]
