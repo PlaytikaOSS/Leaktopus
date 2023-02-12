@@ -1,7 +1,9 @@
 import os
 from distutils.util import strtobool
+from urllib.parse import urlsplit
 
 from config import celery
+from requests_cache import RedisCache
 
 SECRET_KEY = os.getenv("SECRET_KEY", None)
 
@@ -106,6 +108,10 @@ ENHANCEMENT_MODULE_CONFIG = {
 
 # Redis.
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+url_parts = urlsplit(REDIS_URL)
+REDIS_HOST = url_parts.hostname
+REDIS_PORT = url_parts.port
+REDIS_DB = url_parts.path.strip("/")
 
 # Github.
 GITHUB_USE_APP = os.getenv("GITHUB_USE_APP", False)
@@ -119,6 +125,8 @@ CELERY_CONFIG = {
     "result_backend": REDIS_URL,
     "include": celery.includes,
     "task_max_retries": celery.max_retires,
+    "task_reject_on_worker_lost": True,
+    "task_acks_late": True,
     "task_serializer": "pickle",
     "result_serializer": "pickle",
     "accept_content": ["pickle"],
@@ -128,3 +136,10 @@ CELERY_CONFIG = {
     "task_eager_propagates": os.getenv("CELERY_ALWAYS_EAGER", False),
 }
 USE_EXPERIMENTAL_REFACTORING = os.getenv("USE_EXPERIMENTAL_REFACTORING", False)
+REQUESTS_CACHE_ENABLED = os.getenv("REQUESTS_CACHE_ENABLED", True)
+REQUESTS_CACHE_LOG_LEVEL = os.getenv("REQUESTS_CACHE_LOG_LEVEL", "WARNING")
+REQUESTS_CACHE_BACKEND = RedisCache(
+    host=REDIS_HOST,
+    port=REDIS_PORT,
+    db=REDIS_DB
+)

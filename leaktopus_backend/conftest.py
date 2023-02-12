@@ -38,10 +38,16 @@ def app():
     task_manager = TaskManager(MemoryClient(override_tasks={"run_task": lambda: None}))
     app = create_app(task_manager=task_manager, settings_override={
         "TESTING": True,
-        "USE_EXPERIMENTAL_REFACTORING": True
+        "USE_EXPERIMENTAL_REFACTORING": True,
+        "REQUESTS_CACHE_ENABLED": False,
     })
-    yield app
+    with app.app_context():
+        yield app
 
+@pytest.fixture()
+def client_memory(app):
+    with app.test_client() as client:
+        yield client
 
 @pytest.fixture()
 def app_db():
