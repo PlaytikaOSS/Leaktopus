@@ -9,5 +9,5 @@ class EnhancementModuleMemoryProvider(EnhancementModuleProviderInterface):
     def get_provider_name(self):
         return "memory"
 
-    def execute(self, potential_leak_source_request, url, full_diff_dir):
+    def execute(self, potential_leak_source_request, leak_service, url, full_diff_dir):
         logger.info("Enhancement module service is enhancing PLS {} stored in {}", url, full_diff_dir)
