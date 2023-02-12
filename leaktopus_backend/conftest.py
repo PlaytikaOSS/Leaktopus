@@ -1,7 +1,7 @@
 import os
 
 import pytest
-
+import requests
 from leaktopus.app import create_app
 from leaktopus.domain.extractors.domain_extractor import DomainExtractor
 from leaktopus.domain.extractors.email_extractor import EmailExtractor
@@ -32,6 +32,7 @@ from leaktopus.tasks.task_manager import TaskManager
 @pytest.fixture()
 def app():
     task_manager = TaskManager(MemoryClient(override_tasks={"run_task": lambda: None}))
+    session = requests.Session
     app = create_app(task_manager=task_manager, settings_override={
         "TESTING": True,
         "USE_EXPERIMENTAL_REFACTORING": True,
@@ -39,11 +40,9 @@ def app():
     })
     with app.app_context():
         yield app
+    requests.Session = session
+    requests.sessions.Session = session
 
-@pytest.fixture()
-def client_memory(app):
-    with app.test_client() as client:
-        yield client
 
 @pytest.fixture()
 def app_db():
