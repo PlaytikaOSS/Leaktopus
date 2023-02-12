@@ -98,7 +98,7 @@ def test_scan_extended_ends_with_correct_scan_status_with_success(
         app_celery_db, client, True,
         q="Leaktopus Integration",
         enhancement_modules=["domains", "sensitive_keywords", "contributors", "secrets"],
-        organization_domains=domain,
+        organization_domains=[domain],
         sensitive_keywords=[sensitive_keyword]
     )
     scan_status = start_scan_response["status"]
@@ -107,15 +107,18 @@ def test_scan_extended_ends_with_correct_scan_status_with_success(
     leak = get_leak_by_id(app_celery_db, client, 1)
     assert_leak_has_base_data(leak)
 
-    from loguru import logger
-    logger.debug(leak)
+    assert len(leak["sensitive_keywords"]) > 0
     assert sensitive_keyword in leak["sensitive_keywords"][0]["keyword"]
+
+    assert len(leak["domains"]) > 0
     assert domain in leak["domains"][0]["domain"]
 
     contributors = leak["contributors"]
+    assert len(contributors) > 0
     assert "noreply@github.com" in contributors[0]["committer_email"]
     assert contributors[0]["is_organization_domain"] == 1
 
+    assert len(leak["secrets"]) > 0
     assert "AKIAIOSFODNN7EXAMPAA" in leak["secrets"][0]["match_string"]
 
 
