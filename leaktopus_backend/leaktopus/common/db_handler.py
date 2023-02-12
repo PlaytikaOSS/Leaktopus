@@ -108,6 +108,19 @@ def db_install(db):
                 )
         """
     )
+
+    cursor.execute(
+        """
+            CREATE TABLE IF NOT exists enhancement_status (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                leak_url TEXT,
+                search_query TEXT,
+                module_key TEXT,
+                last_modified TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+        """
+    )
     db.commit()
 
     # Make some further installation steps.

@@ -48,15 +48,19 @@ SERVICES = {
             "db": True,
         },
     },
-
     "secret": {
         "provider": "sqlite",
         "options": {
             "db": True,
         },
     },
-
     "contributor": {
+        "provider": "sqlite",
+        "options": {
+            "db": True,
+        },
+    },
+    "enhancement_status": {
         "provider": "sqlite",
         "options": {
             "db": True,
@@ -88,6 +92,16 @@ NOTIFICATION_CONFIG = {
         "server_url": SERVER_URL,
         "channel": os.environ.get("SLACK_CHANNEL_ID"),
     },
+}
+
+ENHANCEMENT_MODULE_CONFIG = {
+    "memory": {},
+    "domains": {},
+    "contributors": {},
+    "secrets": {
+        "max_secrets_per_url": 30,
+    },
+    "sensitive_keywords": {},
 }
 
 # Redis.

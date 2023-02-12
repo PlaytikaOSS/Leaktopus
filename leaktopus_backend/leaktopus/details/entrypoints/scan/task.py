@@ -166,6 +166,7 @@ def save_potential_leak_source_page_results_task_entrypoint(
             organization_domains=potential_leak_source_request.organization_domains,
             sensitive_keywords=potential_leak_source_request.sensitive_keywords,
             enhancement_modules=potential_leak_source_request.enhancement_modules,
+            potential_leak_source_request=potential_leak_source_request
         )
         | github_index_commits.s(scan_id=potential_leak_source_request.scan_id)
         | update_scan_status_async.s(scan_id=potential_leak_source_request.scan_id)
