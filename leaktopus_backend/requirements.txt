@@ -2,7 +2,7 @@ jinja2<3.1.0
 Flask==1.1.2
 itsdangerous==2.0.1
 # Flask_Caching==1.9.0
-Werkzeug==1.0.1
+Werkzeug==3.0.3
 flask_debugtoolbar==0.11.0
 # flask_mail==0.9.1
 # flask_static_digest==0.2.1
@@ -12,7 +12,7 @@ slack_sdk==3.19.5
 Flask-Cors==3.0.10
 
 # Application server for both development and production.
-gunicorn==20.0.4
+gunicorn==22.0.0
 watchdog==2.1.9
 
 # Logging
@@ -20,7 +20,7 @@ loguru==0.6.0
 
 # Data and workers.
 redis==3.5.3
-celery==5.0.5
+celery==5.2.2
 
 # Tool specific libs.
 PyGithub>=1.55
@@ -28,7 +28,7 @@ elasticsearch==7.17.4
 GitPython
 truffleHog==2.2.1
 pyjwt>=2.4.0 # not directly required, pinned to avoid a vulnerability
-cryptography==39
+cryptography==42.0.8
 
 # Documentation libs
 flasgger==0.9.5
@@ -41,3 +41,7 @@ pytest-cov==4.0.0
 
 requests_cache==0.9.8
 pytest-httpserver==1.0.0
+requests>=2.32.2 # not directly required, pinned by Snyk to avoid a vulnerability
+setuptools>=70.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
+urllib3>=2.2.2 # not directly required, pinned by Snyk to avoid a vulnerability
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
