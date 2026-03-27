@@ -1,4 +1,4 @@
-jinja2<3.1.0
+jinja2<3.1.4
 Flask==1.1.2
 itsdangerous==2.0.1
 # Flask_Caching==1.9.0
