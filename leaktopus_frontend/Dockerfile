@@ -9,7 +9,7 @@ COPY src ./src
 RUN jq 'to_entries | map_values({ (.key) : ("$" + .key) }) | reduce .[] as $item ({}; . + $item)' ./src/config.json > ./src/config.tmp.json && mv ./src/config.tmp.json ./src/config.json
 RUN npm install && npm run build
 
-FROM nginx:1.23
+FROM nginx:1.26.0
 ENV JSFOLDER=/usr/share/nginx/html/js/*.js
 COPY ./start-nginx.sh /usr/bin/start-nginx.sh
 RUN chmod +x /usr/bin/start-nginx.sh
