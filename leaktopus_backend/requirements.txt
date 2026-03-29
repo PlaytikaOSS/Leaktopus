@@ -41,3 +41,4 @@ pytest-cov==4.0.0
 
 requests_cache==0.9.8
 pytest-httpserver==1.0.0
+requests>=2.32.0 # not directly required, pinned by Snyk to avoid a vulnerability
