@@ -28,7 +28,7 @@ elasticsearch==7.17.4
 GitPython
 truffleHog==2.2.1
 pyjwt>=2.4.0 # not directly required, pinned to avoid a vulnerability
-cryptography==39
+cryptography==42.0.6
 
 # Documentation libs
 flasgger==0.9.5
