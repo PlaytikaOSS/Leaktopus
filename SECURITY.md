@@ -3,3 +3,5 @@ Please follow the guidelines specified in https://www.playtika.com/.well-known/s
 Do **not** report on possible security issues via GitHub's Issues.
 
 Please specify the name of the project (`leaktopus`) when contacting us.
+
+Program Updated On HackerOne
